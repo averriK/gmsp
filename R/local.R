@@ -1,0 +1,44 @@
+ID <- NULL
+X <- NULL
+Y <- NULL
+'.' <- NULL
+'..ICOLS' <- NULL
+'..COLS' <- NULL
+ARMS  <- NULL
+ATn  <- NULL
+ATo  <- NULL
+AZC  <- NULL
+CAV5  <- NULL
+CRC32  <- NULL
+D0575  <- NULL
+D0595  <- NULL
+D2080 <- NULL
+DN05  <- NULL
+DN10  <- NULL
+DN15  <- NULL
+DN20  <- NULL
+DN25  <- NULL
+DN30  <- NULL
+DN40  <- NULL
+DN50  <- NULL
+DN75  <- NULL
+DRMS  <- NULL
+DTn  <- NULL
+DTo  <- NULL
+DZC  <- NULL
+Dmax <- NULL
+EPI <- NULL
+IA <- NULL
+IAd <- NULL
+IAu <- NULL
+PDI <- NULL
+PGA <- NULL
+PGD<- NULL
+PGV <- NULL
+PPI <- NULL
+Scaled <- NULL
+TmA <- NULL
+VRMS<- NULL
+VTn <- NULL
+VTo <- NULL
+VZC<- NULL
