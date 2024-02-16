@@ -31,11 +31,11 @@
 #' @import data.table
 #' @importFrom seewave stdft
 #' @importFrom seewave istft
+#' @importFrom seewave ffilter
 #' @importFrom signal resample
 #' @importFrom pracma detrend
 #' @importFrom stringr str_split
 #' @importFrom purrr map
-#' @noRd
 #'
 getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DetrendAT=FALSE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
@@ -80,7 +80,7 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DetrendAT=
 
   ## Scale Units ----------------------------------------------------------------------
   if(UN!=TargetUnits) {
-    SFU <- .getScaleFactor(SourceUnits =tolower(UN),TargetUnits = TargetUnits)
+    SFU <- .getSF(SourceUnits =tolower(UN),TargetUnits = TargetUnits)
     # AT <- map(AT,function(x){x*SFU})
     ATo[,(colnames(ATo)):=lapply(.SD,function(x){x*SFU})]
   } else {

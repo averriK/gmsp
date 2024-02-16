@@ -67,7 +67,7 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
   # Scale Records -------------------------------------------------------------
   g <- .getG(TargetUnits) #GMSP$g
   if(UN!=TargetUnits) {
-    SFU <- getSF(UN,TargetUnits = TargetUnits)
+    SFU <- .getSF(UN,TargetUnits = TargetUnits)
     AT[, (OCID) := lapply(.SD, function(x){SFU*x}), .SDcols=OCID]
     IM[,UN:=TargetUnits]
   } else {
@@ -83,9 +83,12 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
 
 
   # AT Intensity  -------------------------------------------------------------
-  IM[,IA := dt*pi/(2*g)*AT[, sapply(.SD, function(x){ as.numeric(x %*% x)})]] # Arias Intensity
-  IM[,IAu := dt*pi/(2*g)*AT[, sapply(.SD, function(x){ as.numeric(max(x,0) %*% max(x,0))})]] # Arias Intensity
-  IM[,IAd := dt*pi/(2*g)*AT[, sapply(.SD, function(x){ as.numeric(min(x,0) %*% min(x,0))})]] # Arias Intensity
+ 
+  IM[,IA := AT[, sapply(.SD, function(x){getIA(x,dt=dt)})]] # Arias Intensity
+  IM[,IAu := AT[, sapply(.SD, function(x){getIA(max(x,0),dt=dt)})]] # Arias Intensity
+  IM[,IAd := AT[, sapply(.SD, function(x){getIA(min(x,0),dt=dt)})]] # Arias Intensity
+
+
   IM[,PGA :=AT[, sapply(.SD, function(x){max(abs(x))})]] #  Peak values
   IM[,AZC := AT[, sapply(.SD,   .getZC)]]
   IM[,ARMS := AT[, sapply(.SD,  .getRMS)]]
@@ -147,7 +150,7 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
   # Damage Indices
   IM[,PPI:=sqrt((ARMS^3)*D0595)]
   IM[,EPI:= 0.9/pi*IA*2*g*D0595]
-  IM[,PDI:= ifelse(AZC>0,IA*(Dmax/AZC)^2,NA)]
+  IM[,PDI:= ifelse(AZC>0,IA*(Dmax/AZC)^2,0)]
 
   return(IM)
 }
