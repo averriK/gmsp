@@ -489,7 +489,10 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DetrendAT=
 
 
   ## Trim Zeros ---------------------------------------------------------------------
+browser()
   TS <- lapply(TS,unique)
+  ## Add row of Zeros
+  TS$I <- rbindlist(list(TS$I,0*TS$I[1]))
 
   ## Return ---------------------------------------------------------------------
   return(list(TS=TS,Fs=Fs,dt=dt,NP=NP,UN="mm"))
