@@ -37,7 +37,7 @@
 #' @importFrom stringr str_split
 #' @importFrom purrr map
 #'
-getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DetrendAT=FALSE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
+getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DerivateDT=FALSE,DerivateVT=FALSE,DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
 
 
@@ -394,32 +394,36 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DetrendAT=
 
 
   # Derivate DT   ----------------------------------------------------------------------
-  if(Fstop_LP==0 & Fpass_LP==0){LP <- rep(1,times=NW/2)} else {
-    LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(Fstop_LP/df)*df, Fpass=round(Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
+  if(DerivateDT){
+    if(Fstop_LP==0 & Fpass_LP==0){LP <- rep(1,times=NW/2)} else {
+      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(Fstop_LP/df)*df, Fpass=round(Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
+    }
+
+    COLS <- colnames(AT)
+    VT <- DT[,lapply(.SD,function(x){
+      x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      # x <- pracma::detrend(x,tt="linear")
+      return(x)
+    })]
+    names(VT) <- COLS
   }
 
-  COLS <- colnames(AT)
-  VT <- DT[,lapply(.SD,function(x){
-    x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-    x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-    # x <- pracma::detrend(x,tt="linear")
-    return(x)
-  })]
-  names(VT) <- COLS
 
   # Derivate VT   ----------------------------------------------------------------------
-  COLS <- colnames(AT)
-  AT <- VT[,lapply(.SD,function(x){
-    x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-    x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HP*LP, rescale = TRUE)
-    # x <- pracma::detrend(x,tt="linear")
-    return(x)
-  })]
-  names(AT) <- COLS
+  if(DerivateVT){
+    COLS <- colnames(AT)
+    AT <- VT[,lapply(.SD,function(x){
+      x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HP*LP, rescale = TRUE)
+      # x <- pracma::detrend(x,tt="linear")
+      return(x)
+    })]
+    names(AT) <- COLS
+  }
+
 
   # Restore Scale -------------------------------------------------------------------
-
-
   if(RestoreScale){
     ICOLS <- (colnames(AT) |> grep(pattern = "^I.",value = TRUE))
     # PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
