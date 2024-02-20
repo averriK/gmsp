@@ -3,17 +3,20 @@ devtools::load_all()
 library(xplot)
 RecordsFolder <- file.path("/home/averri/Public/Database/gmdb/source/tables")
 SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
-RAW <- SET[[1000]]
-RECORD <- getVDA(
+
+
+# -----
+RAW <- SET[[1500]] #577 300 1500
+RECORD <- buildTS(
   a=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  DownFs=200,
+  DownFs=100,
   DerivateDT=FALSE,
   DerivateVT=FALSE,
-  DetrendAT=TRUE,
+  DetrendAT=FALSE,
   DetrendVT=FALSE,
-  DetrendDT=TRUE,
+  DetrendDT=FALSE,
   RestoreScale=FALSE,
   TargetUnits="mm",
   NW=2048,
@@ -29,34 +32,39 @@ IVARS <- c("ts","W")
 MVARS <- colnames(TS[, -c("ts","W")])
 DT.TS <- data.table::melt(TS, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
 DT.TS <- DT.TS[,.(X=ts,Y=value,ID=variable)]
-# plot.highchart(DT.TS[ID=="AT.H1"], plot.type = "line")
-# plot.highchart(DT.TS[ID=="VT.H1"], plot.type = "line")
-# plot.highchart(DT.TS[ID=="DT.H1"], plot.type = "line")
 
+# ----
+ID_TARGET <- "AT.H1"
+DATA <- DT.TS[ID==ID_TARGET]
+# plot.highchart(DATA, plot.type = "line")
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
-s <- DT.TS[ID=="DT.H1"]$Y
-t <- DT.TS[ID=="DT.H1"]$X
-nit <- 20
+# -----
+s <- DT.TS[ID==ID_TARGET]$Y
+t <- DT.TS[ID==ID_TARGET]$X
+nit <- 10
 nimf <- 10
-n <- -7# n<0
+n <- -5# n<0
 namp <- 0.5*10^n
 ntype <- "gaussian" #c("uniform","gaussian")
 IMF <- hht::CEEMD(sig=s, tt=t, noise.amp=namp, trials=nit, verbose = TRUE, noise.type=ntype)
 
+# ----
+# PLOT IMF
 M <- IMF$imf
 OFFSET <- 1.25*ceiling(max(M)-min(M))
 for(i in 1:ncol(M)){
   j <- ncol(M)-i+1
   M[,j] <- M[,j]+OFFSET*i
 }
-DT.IMF <- as.data.table(M)
-DT.IMF[,`:=`(t=IMF$tt,"Residue"=IMF$residue,"Signal"=IMF$original.signal+OFFSET*(ncol(M)+2))]
-setnames(DT.IMF,old=colnames(DT.IMF),new=stringr::str_replace(colnames(DT.IMF),pattern = "V","IMF-"))
+DATA <- as.data.table(M)
+DATA[,`:=`(t=IMF$tt,"Residue"=IMF$residue,"Signal"=IMF$original.signal+OFFSET*(ncol(M)+2))]
+setnames(DATA,old=colnames(DATA),new=stringr::str_replace(colnames(DATA),pattern = "V","IMF-"))
 
 IVARS <- c("t")
-MVARS <- colnames(DT.IMF[, -c("t")])
-DT.IMF <- melt(DT.IMF, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-DT.IMF <- DT.IMF[,.(X=t,Y=value,ID=variable)]
+MVARS <- colnames(DATA[, -c("t")])
+DATA <- melt(DATA, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+DATA <- DATA[,.(X=t,Y=value,ID=variable)]
 plot.highchart(
   color.palette ="ag_Sunset",
   yAxis.label =FALSE,
@@ -66,9 +74,36 @@ plot.highchart(
   legend.show=TRUE,
   yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
   yAxis.min=-OFFSET,
-  data=DT.IMF)
+  data=DATA)
+
+# ----
+# RecordSN: 1500 AT2
+# ID: DT.H1
+# Remove IMF 5,6,7 y residuos
+M <- IMF$imf
+DATA <- data.table(X=IMF$tt,M)
+DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
+imf_target <- c(1,2,3)
+COLS <- paste0("V",imf_target)
+DATA <- DATA[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
 
 
+# ----
+ID_TARGET <- "AT.H1"
+DATA <- DT.TS[ID==ID_TARGET]
+# plot.highchart(DATA, plot.type = "line")
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
-
+# ------
+# Deteccion de modos de baja frecuencia
+M <- IMF$imf
+DATA <- data.table(X=IMF$tt,M)
+setnames(DATA,old=colnames(DT),new=stringr::str_replace(colnames(DT),pattern = "V","IMF-"))
+IVARS <- c("t")
+MVARS <- colnames(DT[, -c("t")])
+DT <- data.table::melt(DT, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+setnames(DT,old=c("variable","value"),new=c("ID","s"))
+FFTIMF <- DT[,getFFT(.SD),by="ID"]
+return(FFTIMF)

@@ -16,7 +16,8 @@ Imports:
     signal,
     stringr,
     purrr,
-    digest
+    digest,
+    spectral
 Depends: 
     R (>= 3.5)
 LazyData: true

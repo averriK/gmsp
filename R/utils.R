@@ -5,6 +5,7 @@
 #' @importFrom stats fft
 #' @importFrom utils tail
 #' @importFrom digest digest
+#' @importFrom spectral spec.fft
 #' @noRd
 #'
 
@@ -250,4 +251,12 @@
           "mm" = g_mms2/1,
           NULL
   )
+}
+
+
+
+
+.getFFT <- function(.SD){
+  FFT <- spectral::spec.fft(y=.SD$s,x=.SD$t,center = TRUE)
+  data.table(f=FFT$fx,PSD=(FFT$PSD))
 }

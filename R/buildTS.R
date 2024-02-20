@@ -9,6 +9,11 @@
 #' @param TFT data.table Transfer Functions Table
 #' @param DownFs integer Downsample Frequency
 #' @param UpFs integer Upsample Frequency
+#' @param FlatZerosAT boolean Flat Zeros Acceleration Time Series
+#' @param FlatZerosVT boolean Flat Zeros Velicity Time Series
+#' @param FlatZerosDT boolean Flat Zeros Displacements Time Series
+#' @param DerivateDT boolean Derivate Displacements Time Series
+#' @param DerivateVT boolean Derivate Velocity Time Series
 #' @param DetrendAT boolean Detrend Acceleration Time Series
 #' @param DetrendVT boolean Detrend Velocity Time Series
 #' @param DetrendDT boolean Detrend Displacement Time Series
@@ -22,7 +27,7 @@
 #' @param OVLP integer Overlap
 #'
 #' @return data.table
-#' @export getVDA
+#' @export buildTS
 #'
 #' @examples
 #'
@@ -37,7 +42,8 @@
 #' @importFrom stringr str_split
 #' @importFrom purrr map
 #'
-getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DerivateDT=FALSE,DerivateVT=FALSE,DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
+#'
+buildTS <- function(a,dt,UN=NULL,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,FlatZerosAT=FALSE,FlatZerosVT=FALSE,FlatZerosDT=FALSE,DerivateDT=FALSE,DerivateVT=FALSE,DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
 
 
@@ -71,21 +77,17 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DerivateDT
   if(grepl(UN,pattern = "[///+]")){
     UN <- (str_split(UN, pattern = "[///+]") |> unlist())[1]
   }
-  if(!(tolower(UN) %in% c("mm","cm","m","gal","g"))){
-    # Invalid Units
-    return(NULL)
+  if(tolower(UN) %in% c("mm","cm","m","gal","g")){
+    ## Scale Units ----------------------------------------------------------------------
+    if(UN!=TargetUnits) {
+      SFU <- .getSF(SourceUnits =tolower(UN),TargetUnits = TargetUnits)
+      # AT <- map(AT,function(x){x*SFU})
+      ATo[,(colnames(ATo)):=lapply(.SD,function(x){x*SFU})]
+    } else {
+      SFU <- 1
+    }
   }
 
-
-
-  ## Scale Units ----------------------------------------------------------------------
-  if(UN!=TargetUnits) {
-    SFU <- .getSF(SourceUnits =tolower(UN),TargetUnits = TargetUnits)
-    # AT <- map(AT,function(x){x*SFU})
-    ATo[,(colnames(ATo)):=lapply(.SD,function(x){x*SFU})]
-  } else {
-    SFU <- 1
-  }
   Fs <- 1/dt
 
   ## Set Scale Reference ----------------------------------------------------------------------
@@ -107,20 +109,26 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DerivateDT
 
 
   ## Flat Zeros & Taper  ---------------------------------------------------------------------
-  ATo <- ATo[,lapply(X=.SD,FUN= function(x){
-    n <- length(x)
-    iH_stop <- which(abs(x)>0.1) |> first() # 0.1 mm/s2
-    iL_stop <- which(abs(x)>0.1) |> last()
-    iH_pass <- which(abs(x)>1) |> first() #1 mm/s2
-    iL_pass <- which(abs(x)>1) |> last()
-    if(length(iH_pass)==1 && length(iH_stop)==1 && iH_pass>iH_stop){
-      HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.001, Apass = 0.999)
-    } else {HP <- rep(1,n)}
-    if(length(iL_pass)==1 && length(iL_stop)==1 && iL_pass<iL_stop){
-      LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.001, Apass = 0.999)
-    } else {LP <- rep(1,n)}
-    return(x <- x*LP*HP)
-  })]
+  if(FlatZerosAT==TRUE){
+    ATo <- ATo[,lapply(X=.SD,FUN= function(x){
+      n <- length(x)
+      iH_stop <- which(abs(x)>0.1) |> first() # 0.1 mm/s2
+      iL_stop <- which(abs(x)>0.1) |> last()
+      iH_pass <- which(abs(x)>1) |> first() #1 mm/s2
+      iL_pass <- which(abs(x)>1) |> last()
+
+      if(length(iH_pass)==1 && length(iH_stop)==1 && iH_pass>iH_stop){
+        HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.001, Apass = 0.999)
+      } else {
+        HP <- rep(1,n)}
+      if(length(iL_pass)==1 && length(iL_stop)==1 && iL_pass<iL_stop){
+        LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.001, Apass = 0.999)
+      } else {
+        LP <- rep(1,n)}
+      return(x*LP*HP)
+    })]
+  }
+
 
 
   ## Up-sampling ----------------------------------------------------------------------
@@ -165,15 +173,14 @@ getVDA <- function(a,dt,UN,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,DerivateDT
     COLS <- colnames(ATo)
 
     if(Fstop_LP==0 & Fpass_LP==0){
-      LP <- rep(1,times=NW/2)} else {
-        LP  <- .buildLowPassButtterworth(f=fs,Fstop = round(1*Fstop_LP/df)*df, Fpass=round(1*Fpass_LP/df)*df,Astop = 0.001,Apass = 0.95)      }
+      LP <- rep(1,times=NW/2)}
+    else {
+      LP  <- .buildLowPassButtterworth(f=fs,Fstop = round(1*Fstop_LP/df)*df, Fpass=round(1*Fpass_LP/df)*df,Astop = 0.001,Apass = 0.95)}
 
 
     ATo <- ATo[,lapply(.SD,function(x){
       x <- ffilter(wave=x, f = Fs, wl = NW, ovlp = OVLP,custom = LP,rescale = TRUE)
-      # x <- pracma::detrend(x,tt="linear")
       x <- signal::resample(x,DownFs,Fs)
-      # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
 
