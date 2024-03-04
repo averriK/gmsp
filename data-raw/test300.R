@@ -1,17 +1,21 @@
-rm(list=ls())
 devtools::load_all()
 library(xplot)
-RecordsFolder <- file.path("/home/averri/Public/Database/gmdb/source/tables")
-SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 
+if(!exists("SET")){
+  RecordsFolder <- file.path("/home/averri/Public/Database/gmdb/source/tables")
+  SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
+}
+
+RSN.TARGET <- 300
+ID_TARGET <- "DT.H1"
 
 # -----
-RAW <- SET[[1500]] #577 300 1500
+RAW <- SET[[RSN.TARGET]] #577 300 1500
 RECORD <- buildTS(
   a=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  DownFs=100,
+  DownFs=60,
   DerivateDT=FALSE,
   DerivateVT=FALSE,
   DetrendAT=FALSE,
@@ -34,7 +38,6 @@ DT.TS <- data.table::melt(TS, id.vars = IVARS, measure.vars = MVARS) |> na.omit(
 DT.TS <- DT.TS[,.(X=ts,Y=value,ID=variable)]
 
 # ----
-ID_TARGET <- "AT.H1"
 DATA <- DT.TS[ID==ID_TARGET]
 # plot.highchart(DATA, plot.type = "line")
 plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
@@ -76,25 +79,6 @@ plot.highchart(
   yAxis.min=-OFFSET,
   data=DATA)
 
-# ----
-# RecordSN: 1500 AT2
-# ID: DT.H1
-# Remove IMF 5,6,7 y residuos
-M <- IMF$imf
-DATA <- data.table(X=IMF$tt,M)
-DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
-imf_target <- c(1,2,3)
-COLS <- paste0("V",imf_target)
-DATA <- DATA[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
-
-
-
-# ----
-ID_TARGET <- "AT.H1"
-DATA <- DT.TS[ID==ID_TARGET]
-# plot.highchart(DATA, plot.type = "line")
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
 # ------
 # Deteccion de modos de baja frecuencia
@@ -107,3 +91,17 @@ DT <- data.table::melt(DT, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
 setnames(DT,old=c("variable","value"),new=c("ID","s"))
 FFTIMF <- DT[,getFFT(.SD),by="ID"]
 return(FFTIMF)
+
+
+# ----
+# Remove IMF 5,6,7 y residuos
+M <- IMF$imf
+DATA <- data.table(X=IMF$tt,M)
+DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
+imf_target <- c(1,2,3)
+COLS <- paste0("V",imf_target)
+DATA <- DATA[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+
+
+
