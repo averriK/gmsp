@@ -4,7 +4,7 @@ Version: 0.0.1.0000
 Authors@R: 
     person("Alejandro", "Verri Kozlowski", , "averri@fi.uba.ar", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-8535-1170"))
-Description: Description
+Description: This package offers a suite of tools designed for creating smart, dynamic reports in R using markdown, quarto, and LaTeX. It includes versatile wrappers for generating plots with popular libraries like Plotly, ggplot2, and highcharter, and for creating tables with gt, kable, and flextable. Additional features include markup text helpers, integration with OpenAI's ChatGPT for text improvement, DeepL translation for multilingual reports, and the ability to import LaTeX equations directly from images.
 License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -16,7 +16,8 @@ Imports:
     signal,
     stringr,
     purrr,
-    digest
+    digest,
+    spectral
 Depends: 
     R (>= 3.5)
 LazyData: true

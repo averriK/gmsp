@@ -4,7 +4,8 @@
 #' @importFrom seewave istft
 #' @importFrom stats fft
 #' @importFrom utils tail
-#'
+#' @importFrom digest digest
+#' @importFrom spectral spec.fft
 #' @noRd
 #'
 
@@ -116,6 +117,10 @@
   HD <- c(0,1i*ws[2:length(ws)])
   # HD <- purrr::prepend(values=0,(1i*ws[2:length(fs)]))
   return(HD)
+}
+
+.getIA <- function(x,dt){
+ as.numeric(x %*% x)*dt*pi/(2*g)
 }
 
 .getSF <- function(SourceUnits,TargetUnits,g_mms2=9806.650){
@@ -237,4 +242,21 @@
   # ix <- fs[1:NUP] %inrange% c(f1,(f2+fs[2]))
   Tm <-sum(Co[idx]^2/fs[idx])/sum(Co[idx]^2)
   return(Tm)
+}
+
+.getG <- function(TargetUnits,g_mms2=9806.650){
+  switch (TargetUnits,
+          "m" = g_mms2/1000,
+          "cm" = g_mms2/10,
+          "mm" = g_mms2/1,
+          NULL
+  )
+}
+
+
+
+
+.getFFT <- function(.SD){
+  FFT <- spectral::spec.fft(y=.SD$s,x=.SD$t,center = TRUE)
+  data.table(f=FFT$fx,PSD=(FFT$PSD))
 }
