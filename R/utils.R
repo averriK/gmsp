@@ -119,7 +119,7 @@
   return(HD)
 }
 
-.getIA <- function(x,dt){
+.getIA <- function(x,dt,g){
  as.numeric(x %*% x)*dt*pi/(2*g)
 }
 
@@ -257,6 +257,6 @@
 
 
 .getFFT <- function(.SD){
-  FFT <- spectral::spec.fft(y=.SD$s,x=.SD$t,center = TRUE)
+  FFT <- spectral::spec.fft(y=.SD$Y,x=.SD$X,center = TRUE)
   data.table(f=FFT$fx,PSD=(FFT$PSD))
 }

@@ -83,10 +83,11 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
 
 
   # AT Intensity  -------------------------------------------------------------
- 
-  IM[,IA := AT[, sapply(.SD, function(x){getIA(x,dt=dt)})]] # Arias Intensity
-  IM[,IAu := AT[, sapply(.SD, function(x){getIA(max(x,0),dt=dt)})]] # Arias Intensity
-  IM[,IAd := AT[, sapply(.SD, function(x){getIA(min(x,0),dt=dt)})]] # Arias Intensity
+  g <- .getG(TargetUnits) #GMSP$g
+
+  IM[,IA := AT[, sapply(.SD, function(x){.getIA(x,dt=dt,g=g)})]] # Arias Intensity
+  IM[,IAu := AT[, sapply(.SD, function(x){.getIA(max(x,0),dt=dt,g=g)})]] # Arias Intensity
+  IM[,IAd := AT[, sapply(.SD, function(x){.getIA(min(x,0),dt=dt,g=g)})]] # Arias Intensity
 
 
   IM[,PGA :=AT[, sapply(.SD, function(x){max(abs(x))})]] #  Peak values

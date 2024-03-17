@@ -4,14 +4,11 @@
 #' @param a data.table Time Series
 #' @param dt numeric Time Step
 #' @param UN character Units
-#' @param Amin numeric Minimum Amplitude
-#' @param Amax numeric Maximum Amplitude
 #' @param TFT data.table Transfer Functions Table
+#' @param hl numeric 1/Tolerance
 #' @param DownFs integer Downsample Frequency
 #' @param UpFs integer Upsample Frequency
 #' @param FlatZerosAT boolean Flat Zeros Acceleration Time Series
-#' @param FlatZerosVT boolean Flat Zeros Velicity Time Series
-#' @param FlatZerosDT boolean Flat Zeros Displacements Time Series
 #' @param DerivateDT boolean Derivate Displacements Time Series
 #' @param DerivateVT boolean Derivate Velocity Time Series
 #' @param DetrendAT boolean Detrend Acceleration Time Series
@@ -43,7 +40,12 @@
 #' @importFrom purrr map
 #'
 #'
-buildTS <- function(a,dt,UN=NULL,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,FlatZerosAT=FALSE,FlatZerosVT=FALSE,FlatZerosDT=FALSE,DerivateDT=FALSE,DerivateVT=FALSE,DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
+buildTS <- function(
+    a,dt,UN=NULL,hl=500,#AT<PGAo/500->0
+    TFT=NULL,DownFs=0,UpFs=0,FlatZerosAT=TRUE,DerivateDT=FALSE,DerivateVT=FALSE,
+    DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,
+    Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,
+    RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
 
 
@@ -95,8 +97,7 @@ buildTS <- function(a,dt,UN=NULL,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,Flat
   PGAo <- apply(ATo,2,function(x){max(abs(x))})
 
 
-  # Keep Only Records with PGA > Amin & PGA < Amax ------
-  if(max(PGAo)<Amin | max(PGAo)>Amax) return(NULL)
+
 
   ## Check Length ----------------------------------------------------------------------
   NP <- nrow(ATo)
@@ -109,13 +110,17 @@ buildTS <- function(a,dt,UN=NULL,Amin = 0,Amax=Inf,TFT=NULL,DownFs=0,UpFs=0,Flat
 
 
   ## Flat Zeros & Taper  ---------------------------------------------------------------------
-  if(FlatZerosAT==TRUE){
+  if(FlatZerosAT==TRUE ){
+    # browser()
     ATo <- ATo[,lapply(X=.SD,FUN= function(x){
       n <- length(x)
-      iH_stop <- which(abs(x)>0.1) |> first() # 0.1 mm/s2
-      iL_stop <- which(abs(x)>0.1) |> last()
-      iH_pass <- which(abs(x)>1) |> first() #1 mm/s2
-      iL_pass <- which(abs(x)>1) |> last()
+      Astop <- max(PGAo/hl,min(x))
+      Apass <- max(PGAo/hl/2,min(x))
+
+      iH_stop <- which(abs(x)>PGAo/hl) |> first() #AT<PGAo/hl->stop
+      iL_stop <- which(abs(x)>PGAo/hl) |> last()
+      iH_pass <- which(abs(x)>PGAo/hl/2) |> first() #AT<PGAo/hl/2->pass
+      iL_pass <- which(abs(x)>PGAo/hl/2) |> last()
 
       if(length(iH_pass)==1 && length(iH_stop)==1 && iH_pass>iH_stop){
         HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.001, Apass = 0.999)

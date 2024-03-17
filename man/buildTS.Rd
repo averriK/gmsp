@@ -8,14 +8,11 @@ buildTS(
   a,
   dt,
   UN = NULL,
-  Amin = 0,
-  Amax = Inf,
+  hl = 500,
   TFT = NULL,
   DownFs = 0,
   UpFs = 0,
-  FlatZerosAT = FALSE,
-  FlatZerosVT = FALSE,
-  FlatZerosDT = FALSE,
+  FlatZerosAT = TRUE,
   DerivateDT = FALSE,
   DerivateVT = FALSE,
   DetrendAT = TRUE,
@@ -38,9 +35,7 @@ buildTS(
 
 \item{UN}{character Units}
 
-\item{Amin}{numeric Minimum Amplitude}
-
-\item{Amax}{numeric Maximum Amplitude}
+\item{hl}{numeric 1/Tolerance}
 
 \item{TFT}{data.table Transfer Functions Table}
 
@@ -49,10 +44,6 @@ buildTS(
 \item{UpFs}{integer Upsample Frequency}
 
 \item{FlatZerosAT}{boolean Flat Zeros Acceleration Time Series}
-
-\item{FlatZerosVT}{boolean Flat Zeros Velicity Time Series}
-
-\item{FlatZerosDT}{boolean Flat Zeros Displacements Time Series}
 
 \item{DerivateDT}{boolean Derivate Displacements Time Series}
 
