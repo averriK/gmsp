@@ -1,10 +1,8 @@
-
 #' Title
 #'
 #' @param a data.table Time Series
 #' @param dt numeric Time Step
 #' @param UN character Units
-#' @param TFT data.table Transfer Functions Table
 #' @param hl numeric 1/Tolerance
 #' @param DownFs integer Downsample Frequency
 #' @param UpFs integer Upsample Frequency
@@ -18,7 +16,6 @@
 #' @param Fstop_LP numeric Low Stop Frequency
 #' @param Fpass_HP numeric High Pass Frequency
 #' @param Fstop_HP numeric High Stop Frequency
-#' @param RestoreScale boolean
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer Overlap
@@ -27,8 +24,6 @@
 #' @export buildTS
 #'
 #' @examples
-#'
-#'
 #'
 #' @import data.table
 #' @importFrom seewave stdft
@@ -41,379 +36,330 @@
 #'
 #'
 buildTS <- function(
-    a,dt,UN=NULL,hl=500,#AT<PGAo/500->0
-    TFT=NULL,DownFs=0,UpFs=0,FlatZerosAT=TRUE,DerivateDT=FALSE,DerivateVT=FALSE,
-    DetrendAT=TRUE,DetrendVT=FALSE,DetrendDT=FALSE,
-    Fpass_LP=0,Fstop_LP=0,Fpass_HP=0,Fstop_HP=0,
-    RestoreScale=FALSE,TargetUnits="mm",NW=2048,OVLP=75){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
+    a, dt, UN = NULL, hl = 500, # AT<PGAo/500->0
+    DownFs = 0, UpFs = 0, FlatZerosAT = TRUE, DerivateDT = FALSE, DerivateVT = FALSE,
+    DetrendAT = TRUE, DetrendVT = FALSE, DetrendDT = FALSE,
+    Fpass_LP = 0, Fstop_LP = 0, Fpass_HP = 0, Fstop_HP = 0,
+    TargetUnits = "mm", NW = 2048, OVLP = 75) {
+  on.exit(expr = {
+    rm(list = ls())
+  }, add = TRUE)
 
 
-  OK <- is.data.table(a) #&& !is.null(dt) && !is.null(UN)
+  OK <- is.data.table(a) # && !is.null(dt) && !is.null(UN)
   stopifnot(OK)
 
   ATo <- copy(a)
-
-
-  ## Check Record ----------------------------------------------------------------------
-  if(
-    nrow(ATo)==0||
-    dt==0||
-    any(is.na(ATo))||
-    max(abs(ATo))==0 #||
-    #any(sapply(ATo, function(x){max(abs(x))})==0)
-  ){
+  ## Check Record ----
+  NP <- nrow(ATo)
+  if (  NP == 0 ||dt == 0 ||any(is.na(ATo)) ||max(abs(ATo)) == 0 ) {
     # Null Record
     return(NULL)
   }
-
+  ## Check Length ----
+  if (NP < NW) return(NULL)
   OCID <- names(ATo)
-  if(any(grepl(OCID,pattern = "^T$"))){
-    ATo[,c("T"):=NULL]
-    OCID <- names(ATo)
-  }
-  if(length(unique(OCID))<3){
-    # Invalid Header
-    return(NULL)
-  }
-  if(grepl(UN,pattern = "[///+]")){
+  ## Check Invalid Header ----
+  if (length(unique(OCID)) < 3) return(NULL)
+
+
+  ## Scale Units ----
+
+  if (grepl(UN, pattern = "[///+]")) {
     UN <- (str_split(UN, pattern = "[///+]") |> unlist())[1]
   }
-  if(tolower(UN) %in% c("mm","cm","m","gal","g")){
-    ## Scale Units ----------------------------------------------------------------------
-    if(UN!=TargetUnits) {
-      SFU <- .getSF(SourceUnits =tolower(UN),TargetUnits = TargetUnits)
-      # AT <- map(AT,function(x){x*SFU})
-      ATo[,(colnames(ATo)):=lapply(.SD,function(x){x*SFU})]
-    } else {
-      SFU <- 1
-    }
+  if (!(tolower(UN) %in% c("mm", "cm", "m", "gal", "g"))) return(NULL)
+
+  if (tolower(UN) != TargetUnits) {
+    SFU <- .getSF(SourceUnits = tolower(UN), TargetUnits = TargetUnits)
+    # AT <- map(AT,function(x){x*SFU})
+    # ATo[, (colnames(ATo)) := lapply(.SD, function(x) {x * SFU})]
+    ATo <- ATo[,.(sapply(.SD, function(x) {x * SFU}))]
   }
+  Fs <- 1 / dt
 
-  Fs <- 1/dt
 
-  ## Set Scale Reference ----------------------------------------------------------------------
+
+
+  ## Set Scale Reference ----
   DUMMY <- NULL
-  PGAo <- apply(ATo,2,function(x){max(abs(x))})
+  PGAo <- apply(ATo, 2, function(x) { max(abs(x))})
+  ## Scale to 1 ----
+  AT <-ATo[, .(sapply(.SD, function(x){x/max(abs(x))}))]
 
 
-
-
-  ## Check Length ----------------------------------------------------------------------
-  NP <- nrow(ATo)
-  if(NP<NW){return(NULL)}
-
-  ## Detrend ----------------------------------------------------------------------
-  if(DetrendAT){
-    ATo[,(colnames(ATo)):=lapply(.SD,function(x){pracma::detrend(x,tt="linear")})]
+  ## Detrend ----
+  if (DetrendAT) {
+    AT[, (colnames(AT)) := lapply(.SD, function(x) {
+      pracma::detrend(x, tt = "linear")
+    })]
   }
 
 
-  ## Flat Zeros & Taper  ---------------------------------------------------------------------
-  if(FlatZerosAT==TRUE ){
+  ## Flat Zeros & Taper  ----
+  if (FlatZerosAT == TRUE) {
     # browser()
-    ATo <- ATo[,lapply(X=.SD,FUN= function(x){
+    AT <- AT[, lapply(X = .SD, FUN = function(x) {
       n <- length(x)
-      Astop <- max(PGAo/hl,min(x))
-      Apass <- max(PGAo/hl/2,min(x))
+      Astop <- max(PGAo / hl, min(x))
+      Apass <- max(PGAo / hl / 2, min(x))
 
-      iH_stop <- which(abs(x)>PGAo/hl) |> first() #AT<PGAo/hl->stop
-      iL_stop <- which(abs(x)>PGAo/hl) |> last()
-      iH_pass <- which(abs(x)>PGAo/hl/2) |> first() #AT<PGAo/hl/2->pass
-      iL_pass <- which(abs(x)>PGAo/hl/2) |> last()
+      iH_stop <- which(abs(x) > Astop) |> first() # AT<PGAo/hl->stop
+      iL_stop <- which(abs(x) > Astop) |> last()
+      iH_pass <- which(abs(x) > Apass) |> first() # AT<PGAo/hl/2->pass
+      iL_pass <- which(abs(x) > Apass) |> last()
 
-      if(length(iH_pass)==1 && length(iH_stop)==1 && iH_pass>iH_stop){
-        HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.001, Apass = 0.999)
+      if (length(iH_pass) == 1 && length(iH_stop) == 1 && iH_pass > iH_stop) {
+        HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
       } else {
-        HP <- rep(1,n)}
-      if(length(iL_pass)==1 && length(iL_stop)==1 && iL_pass<iL_stop){
-        LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.001, Apass = 0.999)
+        HP <- rep(1, n)
+      }
+      if (length(iL_pass) == 1 && length(iL_stop) == 1 && iL_pass < iL_stop) {
+        LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
       } else {
-        LP <- rep(1,n)}
-      return(x*LP*HP)
+        LP <- rep(1, n)
+      }
+      return(x * LP * HP)
     })]
   }
 
 
 
-  ## Up-sampling ----------------------------------------------------------------------
+  ## Up-sampling ----
 
-  if(UpFs!=0 & UpFs>Fs){
-    ATo <- ATo[,lapply(.SD,function(x){
-      x <- signal::resample(x,UpFs,Fs)
+  if (UpFs != 0 && UpFs > Fs) {
+    AT <- AT[, lapply(.SD, function(x) {
+      x <- signal::resample(x, UpFs, Fs)
       # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
 
-    ## Detrend ----------------------------------------------------------------------
-    if(DetrendAT){
-      ATo[,(colnames(ATo)):=lapply(.SD,function(x){pracma::detrend(x,tt="linear")})]
+    ## Detrend ----
+    if (DetrendAT) {
+      AT[, (colnames(AT)) := lapply(.SD, function(x) {
+        pracma::detrend(x, tt = "linear")
+      })]
     }
 
     # Update Record
     Fs <- UpFs
-    dt <- 1/Fs
-    NP <-  nrow(ATo)
-    names(ATo) <- OCID
+    dt <- 1 / Fs
+    NP <- nrow(AT)
+    names(AT) <- OCID
   }
 
-  ## Padding Zeros ----------------------------------------------------------------------
-  NP <- nrow(ATo)
+  ## Padding Zeros ----
+  NP <- nrow(AT)
   NZ <- .getNZ(NP)
-  if(NZ > 0) {
-    ZEROS <- data.table()[,(colnames(ATo)):=list(rep(0,NZ))]
+  if (NZ > 0) {
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
   } else {
-    ZEROS <- data.table()[,(colnames(ATo)):=list(rep(0,NW))]
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
   }
-  ATo <- rbindlist(list(ZEROS,ATo))
+  AT <- rbindlist(list(ZEROS, AT))
 
 
 
-  ## Antialias & Downsampling ----------------------------------------------------------------------
+  ## Antialias & Downsampling ----
 
-  if(DownFs!=0 & Fs!=DownFs){
-    df <- Fs/NW #0.03125#
-    fs <- seq(from=0,by=df,length.out=NW/2)
-    FsNYQ <- Fs/2 #16
-    COLS <- colnames(ATo)
+  if (DownFs != 0 && Fs != DownFs) {
+    df <- Fs / NW # 0.03125#
+    fs <- seq(from = 0, by = df, length.out = NW / 2)
+    FsNYQ <- Fs / 2 # 16
+    COLS <- colnames(AT)
 
-    if(Fstop_LP==0 & Fpass_LP==0){
-      LP <- rep(1,times=NW/2)}
-    else {
-      LP  <- .buildLowPassButtterworth(f=fs,Fstop = round(1*Fstop_LP/df)*df, Fpass=round(1*Fpass_LP/df)*df,Astop = 0.001,Apass = 0.95)}
+    if (Fstop_LP == 0 & Fpass_LP == 0) {
+      LP <- rep(1, times = NW / 2)
+    } else {
+      LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+    }
 
 
-    ATo <- ATo[,lapply(.SD,function(x){
-      x <- ffilter(wave=x, f = Fs, wl = NW, ovlp = OVLP,custom = LP,rescale = TRUE)
-      x <- signal::resample(x,DownFs,Fs)
+    AT <- AT[, lapply(.SD, function(x) {
+      x <- ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      x <- signal::resample(x, DownFs, Fs)
       return(x)
     })]
 
-    ## Detrend ----------------------------------------------------------------------
-    if(DetrendAT){
-      ATo <- ATo[,lapply(.SD,function(x){
-        x <- pracma::detrend(x,tt="linear")
+    ## Detrend ---
+    if (DetrendAT) {
+      AT <- AT[, lapply(.SD, function(x) {
+        x <- pracma::detrend(x, tt = "linear")
         return(x)
       })]
     }
-    names(ATo) <- COLS
+    names(AT) <- COLS
     # Update
     Fs <- DownFs
-    dt <- 1/Fs
-
+    dt <- 1 / Fs
   }
 
-  ## Padding zeros ----------------------------------------------------------------------
-  NP <- nrow(ATo)
-  if(NP<NW){return(NULL)}
+  ## Padding zeros ----
+
+  NP <- nrow(AT)
+  if (NP < NW) {
+    return(NULL)
+  }
   NZ <- .getNZ(NP)
-  if(NZ > 0) {
-    ZEROS <- data.table()[,(colnames(ATo)):=list(rep(0,NZ))]
+  if (NZ > 0) {
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
   } else {
-    ZEROS <- data.table()[,(colnames(ATo)):=list(rep(0,NW))]
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
   }
-  ATo <- rbindlist(list(ZEROS,ATo))
+  AT <- rbindlist(list(ZEROS, AT))
 
-  ## Build HT Filters ----------------------------------------------------------------------
-  Fs <- 1/dt
-  df <- Fs/NW #0.03125#
-  fs <-  seq(from=0,by=df,length.out=NW/2)
+  ## Build HT Filters ----
+  Fs <- 1 / dt
+  df <- Fs / NW # 0.03125#
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  # SiteSN <- colnames(TFT)
-
-
-  ## Convolute ----------------------------------------------------------------------
-  # COLS <- colnames(TFT)#c("I",names(TFT)|> grep(pattern = "HS2O",value = TRUE))
-  if(!is.null(TFT)){
-    # TFT <- data.table(I=rep(1,times=nrow(ATo)))
-    AT <- map(TFT,function(x){
-      map(ATo,function(y){
-        y <- .ffilter(y, f = Fs, wl = NW, ovlp = OVLP, custom = x)*NW
-        # y <- pracma::detrend(y,tt="linear")
-        return(y)
-      }) |> as.data.table()
-    })
-    names(AT) <- colnames(TFT)
-    ## GROUP TIMESERIES IN DT
-    AT <- as.data.table(AT)
-  } else {
-    AT <- as.data.table(ATo)
-  }
-
-  ## Restore Scale -------------------------------------------------------------------
-
-  if(RestoreScale){
-    ICOLS <- (colnames(AT) |> grep(pattern = "^I.",value = TRUE))
-    if(length(ICOLS)>0){
-      PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
-    } else {
-      PGA <- apply(AT,2,function(x){max(abs(x))})
-    }
-    SF <- (PGAo/PGA)
-    for(n in seq_len(length.out = length(SF))){
-      COLS <- (colnames(AT) |> grep(pattern = OCID[n],value = TRUE))
-      AT[,(COLS):=lapply(.SD,function(x){x*SF[n]}),.SDcols=COLS]
-    }
-  }
+  AT <- as.data.table(AT)
 
 
 
 
-  ## Padding zeros ----------------------------------------------------------------------
+
+
+  ## Padding zeros ----
   NP <- nrow(AT)
   NZ <- .getNZ(NP)
-  if(NZ > 0) {
-    ZEROS <- data.table()[,(colnames(AT)):=list(rep(0,NZ))]
+  if (NZ > 0) {
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
   } else {
-    ZEROS <- data.table()[,(colnames(AT)):=list(rep(0,NW))]
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
   }
-  AT <- rbindlist(list(ZEROS,AT))
-  ## Build Filters ----------------------------------------------------------------------
-  Fs <- 1/dt
-  df <- Fs/NW #0.03125#
-  fs <-  seq(from=0,by=df,length.out=NW/2)
+  AT <- rbindlist(list(ZEROS, AT))
+  ## Build Filters ----
+  Fs <- 1 / dt
+  df <- Fs / NW # 0.03125#
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
 
 
-  FsNYQ <- Fs/2 #30
-  if(Fstop_LP==0 & Fpass_LP==0){
-    LP <- rep(1,times=NW/2)} else{
-      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(1*Fstop_LP/df)*df, Fpass=round(1*Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
-    }
+  FsNYQ <- Fs / 2 # 30
+  if (Fstop_LP == 0 & Fpass_LP == 0) {
+    LP <- rep(1, times = NW / 2)
+  } else {
+    LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.90)
+  }
 
   #
-  if(Fpass_HP==0 & Fstop_HP==0){
-    HP <- rep(1,times=NW/2)} else {
-      HP <-  .buildHighPassButtterworth(f=fs, Fstop = round(1*Fstop_HP/df)*df, Fpass=round(1*Fpass_HP/df)*df,Astop=0.001, Apass=0.99)
-    }
-  ## Highpass & Lowpass filters`------------------------------------------------------------------
+  if (Fpass_HP == 0 & Fstop_HP == 0) {
+    HP <- rep(1, times = NW / 2)
+  } else {
+    HP <- .buildHighPassButtterworth(f = fs, Fstop = round(1 * Fstop_HP / df) * df, Fpass = round(1 * Fpass_HP / df) * df, Astop = 0.001, Apass = 0.99)
+  }
+  ## Highpass & Lowpass filters----
   COLS <- colnames(AT)
-  AT <- AT[,lapply(.SD,function(x){
-    x <- ffilter(wave=x, f = Fs, wl = NW, ovlp = OVLP,custom = HP*LP,rescale = TRUE)
+  AT <- AT[, lapply(.SD, function(x) {
+    x <- ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = HP * LP, rescale = TRUE)
     # x <- pracma::detrend(x,tt="linear")
     return(x)
   })]
-  ## Detrend ----------------------------------------------------------------------
-  if(DetrendAT){
-    AT <- AT[,lapply(.SD,function(x){
-      x <- pracma::detrend(x,tt="linear")
+  ## Detrend ----
+  if (DetrendAT) {
+    AT <- AT[, lapply(.SD, function(x) {
+      x <- pracma::detrend(x, tt = "linear")
       return(x)
     })]
   }
-
-
   names(AT) <- COLS
 
-  ## Restore Scale -------------------------------------------------------------------
+  ## Build VT Filters ----
+  Fs <- 1 / dt
+  df <- Fs / NW # 0.03125#
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  if(RestoreScale){
-    ICOLS <- (colnames(AT) |> grep(pattern = "^I.",value = TRUE))
-    # PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
+  FsNYQ <- Fs / 2 # 16
+  if (Fstop_LP == 0 & Fpass_LP == 0) {
+    LP <- rep(1, times = NW / 2)
+  } else {
+    LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.001, Apass = 0.90)
+  }
 
-    if(length(ICOLS)>0){
-      PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
-    } else {
-      PGA <- apply(AT,2,function(x){max(abs(x))})
-    }
+  HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
 
-    SF <- (PGAo/PGA)
-    for(n in seq_len(length.out = length(SF))){
-      COLS <- (colnames(AT) |> grep(pattern = OCID[n],value = TRUE))
-      AT[,(COLS):=lapply(.SD,function(x){x*SF[n]}),.SDcols=COLS]
-    }}
-
-
-
-
-  ## Build VT Filters ----------------------------------------------------------------------
-  Fs <- 1/dt
-  df <- Fs/NW #0.03125#
-  fs <-  seq(from=0,by=df,length.out=NW/2)
-
-  FsNYQ <- Fs/2 #16
-  if(Fstop_LP==0 & Fpass_LP==0){
-    LP <- rep(1,times=NW/2)} else {
-      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(Fstop_LP/df)*df, Fpass=round(Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
-    }
-
-  HI <-  .buildIntegrateFilter(f=fs) ## Integrate Filter
-
-  ## Padding zeros AT----------------------------------------------------------------------
+  ## Padding zeros AT----
   NP <- nrow(AT)
   NZ <- .getNZ(NP)
-  if(NZ > 0) {
-    ZEROS <- data.table()[,(colnames(AT)):=list(rep(0,NZ))]
+  if (NZ > 0) {
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
   } else {
-    ZEROS <- data.table()[,(colnames(AT)):=list(rep(0,NW))]
+    ZEROS <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
   }
-  AT <- rbindlist(list(ZEROS,AT))
-  # Integrate Acceleration ----------------------------------------------------------------------
+  AT <- rbindlist(list(ZEROS, AT))
+  # Integrate Acceleration ----
   COLS <- colnames(AT)
-  VT <- AT[,lapply(.SD,function(x){
-    x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)*NW
+  VT <- AT[, lapply(.SD, function(x) {
+    x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
     # x <- pracma::detrend(x,tt="linear")
   })]
   names(VT) <- COLS
 
-  ## Build Displacement Filters ----------------------------------------------------------------------
-  Fs <- 1/dt
-  df <- Fs/NW #0.03125#
-  fs <-  seq(from=0,by=df,length.out=NW/2)
-  FsNYQ <- Fs/2 #16 round(3/8*Fpass_LP/df)*df
-  if(Fstop_LP==0 & Fpass_LP==0){
-    LP <- rep(1,times=NW/2)} else {
-      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(Fstop_LP/df)*df, Fpass=round(Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
-    }
-  HI <-  .buildIntegrateFilter(f=fs) ## Integrate Filter
+  ## Build Displacement Filters ----
+  Fs <- 1 / dt
+  df <- Fs / NW # 0.03125#
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
+  FsNYQ <- Fs / 2 # 16 round(3/8*Fpass_LP/df)*df
+  if (Fstop_LP == 0 & Fpass_LP == 0) {
+    LP <- rep(1, times = NW / 2)
+  } else {
+    LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.001, Apass = 0.90)
+  }
+  HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
 
-  ## Padding zeros VT ----------------------------------------------------------------------
+  ## Padding zeros VT ----
   NP <- nrow(VT)
   NZ <- .getNZ(NP)
-  if(NZ > 0) {
-    ZEROS <- data.table()[,(colnames(VT)):=list(rep(0,NZ))]
+  if (NZ > 0) {
+    ZEROS <- data.table()[, (colnames(VT)) := list(rep(0, NZ))]
   } else {
-    ZEROS <- data.table()[,(colnames(VT)):=list(rep(0,NW))]
+    ZEROS <- data.table()[, (colnames(VT)) := list(rep(0, NW))]
   }
-  VT <- rbindlist(list(ZEROS,VT))
+  VT <- rbindlist(list(ZEROS, VT))
 
 
-  ## Integrate Velocity ----------------------------------------------------------------------
+  ## Integrate Velocity ----
   COLS <- colnames(AT)
-  DT <- VT[,lapply(.SD,function(x){
-    x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
+  DT <- VT[, lapply(.SD, function(x) {
+    x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
     # x <- pracma::detrend(x,tt="linear")
   })]
   names(DT) <- COLS
 
-  ## Build Derivative Filters ----------------------------------------------------------------------
-  FsNYQ <- Fs/2 #30
+  ## Build Derivative Filters ----
+  FsNYQ <- Fs / 2 # 30
 
-  if(Fstop_LP==0 & Fpass_LP==0){
-    LP <- rep(1,times=NW/2)} else {
-      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(1*Fstop_LP/df)*df, Fpass=round(1*Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
-    }
+  if (Fstop_LP == 0 & Fpass_LP == 0) {
+    LP <- rep(1, times = NW / 2)
+  } else {
+    LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.90)
+  }
 
-  HD <-  .buildDerivateFilter(f=fs)## Derivate Filter
+  HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
 
-  if(Fpass_HP==0 & Fstop_HP==0){
-    HP <- rep(1,times=NW/2)} else{
-      HP <-  .buildHighPassButtterworth(f=fs, Fstop = round(1*Fstop_HP/df)*df, Fpass=round(1*Fpass_HP/df)*df ,Astop=0.001, Apass=0.99)
-    }
+  if (Fpass_HP == 0 & Fstop_HP == 0) {
+    HP <- rep(1, times = NW / 2)
+  } else {
+    HP <- .buildHighPassButtterworth(f = fs, Fstop = round(1 * Fstop_HP / df) * df, Fpass = round(1 * Fpass_HP / df) * df, Astop = 0.001, Apass = 0.99)
+  }
 
   # HP <-  .buildHighPassButtterworth(f=fs, Fstop = Fstop_HP,Fpass=Fpass_HP ,Astop=0.001, Apass=0.99)
 
 
 
-  # Derivate DT   ----------------------------------------------------------------------
-  if(DerivateDT){
-    if(Fstop_LP==0 & Fpass_LP==0){LP <- rep(1,times=NW/2)} else {
-      LP <-  .buildLowPassButtterworth(f=fs, Fstop = round(Fstop_LP/df)*df, Fpass=round(Fpass_LP/df)*df, Astop=0.001, Apass=0.90)
+  # Derivate DT   ----
+  if (DerivateDT) {
+    if (Fstop_LP == 0 & Fpass_LP == 0) {
+      LP <- rep(1, times = NW / 2)
+    } else {
+      LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.001, Apass = 0.90)
     }
 
     COLS <- colnames(AT)
-    VT <- DT[,lapply(.SD,function(x){
-      x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+    VT <- DT[, lapply(.SD, function(x) {
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
       # x <- pracma::detrend(x,tt="linear")
       return(x)
@@ -422,12 +368,12 @@ buildTS <- function(
   }
 
 
-  # Derivate VT   ----------------------------------------------------------------------
-  if(DerivateVT){
+  # Derivate VT   ----
+  if (DerivateVT) {
     COLS <- colnames(AT)
-    AT <- VT[,lapply(.SD,function(x){
-      x <- NW*.ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HP*LP, rescale = TRUE)
+    AT <- VT[, lapply(.SD, function(x) {
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HP * LP, rescale = TRUE)
       # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
@@ -435,81 +381,42 @@ buildTS <- function(
   }
 
 
-  # Restore Scale -------------------------------------------------------------------
-  if(RestoreScale){
-    ICOLS <- (colnames(AT) |> grep(pattern = "^I.",value = TRUE))
-    # PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
-    if(length(ICOLS)>0){
-      PGA <- apply(AT[,..ICOLS],2,function(x){max(abs(x))})
-    } else {
-      PGA <- apply(AT,2,function(x){max(abs(x))})
-    }
-    SF <- (PGAo/PGA)
-    for(n in seq_len(length.out = length(SF))){
-      COLS <- (colnames(AT) |> grep(pattern = OCID[n],value = TRUE))
-      AT[,(COLS):=lapply(.SD,function(x){x*SF[n]}),.SDcols=COLS]
-      VT[,(COLS):=lapply(.SD,function(x){x*SF[n]}),.SDcols=COLS]
-      DT[,(COLS):=lapply(.SD,function(x){x*SF[n]}),.SDcols=COLS]
-    }
-  }
 
 
-  ## Pack & Taper  -------------------------------------------------
 
-  ICOLS <- colnames(AT) |> grep(pattern = "^I.",value = TRUE)
 
-  if(length(ICOLS)>0){
-    ATo <- AT[,..ICOLS] |> as.data.table() |> setnames(new = OCID)
-    VTo <- VT[,..ICOLS] |> as.data.table() |> setnames(new = OCID)
-    DTo <- DT[,..ICOLS] |> as.data.table() |> setnames(new = OCID)
-  } else {
-    ATo <- AT |> as.data.table() |> setnames(new = OCID)
-    VTo <- VT |> as.data.table() |> setnames(new = OCID)
-    DTo <- DT |> as.data.table() |> setnames(new = OCID)
-  }
+  ## Pack & Taper  ----
 
-  PGA <- apply(ATo,2,function(x){max(abs(x))})
+  NMX <- min(nrow(AT), nrow(VT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
+  PGA <- apply(AT, 2, function(x) {
+    max(abs(x))
+  })
+  Wo <- .taper(AT[[which.max(PGA)]])
 
-  NMX <- min(nrow(ATo),nrow(VTo),nrow(DTo))
-  ATo <- ATo[-((NMX):.N)]
-  VTo <- VTo[-((NMX):.N)]
-  DTo <- DTo[-((NMX):.N)]
-  Wo <- .taper(ATo[[which.max(PGA)]])
-  ATo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-  VTo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-  DTo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-  TS <- list(data.table(W=Wo,AT=ATo,VT=VTo,DT=DTo))
+  AT <- AT[,.(sapply(.SD, function(x) {x * Wo}))]
+  VT <- VT[,.(sapply(.SD, function(x) {x * Wo}))]
+  DT <- DT[,.(sapply(.SD, function(x) {x * Wo}))]
+
+
+  ## Restore Scale ----
+  browser()
+  ATo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]
+  VTo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]
+  DTo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]
+
+  ## Pack Time Series
+  TS <- list(data.table(W = Wo, AT = ATo, VT = VTo, DT = DTo))
   names(TS) <- "I"
 
-  if(!is.null(TFT)){
-    XCOLS <- colnames(TFT)[colnames(TFT)!="I"]#SiteSN[SiteSN!="I"]
-    for(j in seq_along(along.with = XCOLS)){
-      COLS <- grep(colnames(AT), pattern = paste0(XCOLS[j],"\\."), value = TRUE)
-      ATo <- AT[,..COLS] |> as.data.table() |> setnames(new = OCID)
-      PGA <- apply(ATo,2,function(x){max(abs(x))})
-      Wo <- .taper(ATo[[which.max(PGA)]])
-      VTo <- VT[,..COLS] |> as.data.table() |> setnames(new = OCID)
-      DTo <- DT[,..COLS] |> as.data.table() |> setnames(new = OCID)
 
-      ATo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-      VTo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-      DTo[,(OCID):=lapply(.SD,function(x){Wo*x}),.SDcols=OCID]
-      TSo <- list(data.table(W=Wo,AT=ATo,VT=VTo,DT=DTo))
-      names(TSo) <- XCOLS[j]
-      TS <- append(TS,TSo)
-    }
-    rm(AT,ATo,VT,VTo,DT,DTo)
-  }
-
-
-
-
-  ## Trim Zeros ---------------------------------------------------------------------
-  TS <- lapply(TS,unique)
+  ## Trim Zeros ---
+  TS <- lapply(TS, unique)
   ## Add row of Zeros
-  TS$I <- rbindlist(list(TS$I,0*TS$I[1]))
+  TS$I <- rbindlist(list(TS$I, 0 * TS$I[1]))
 
-  ## Return ---------------------------------------------------------------------
-  return(list(TS=TS,Fs=Fs,dt=dt,NP=NP,UN="mm"))
-
+  ## Return
+  return(list(TS = TS, Fs = Fs, dt = dt, NP = NP, UN = "mm"))
 }

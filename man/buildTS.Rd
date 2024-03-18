@@ -9,7 +9,6 @@ buildTS(
   dt,
   UN = NULL,
   hl = 500,
-  TFT = NULL,
   DownFs = 0,
   UpFs = 0,
   FlatZerosAT = TRUE,
@@ -22,7 +21,6 @@ buildTS(
   Fstop_LP = 0,
   Fpass_HP = 0,
   Fstop_HP = 0,
-  RestoreScale = FALSE,
   TargetUnits = "mm",
   NW = 2048,
   OVLP = 75
@@ -36,8 +34,6 @@ buildTS(
 \item{UN}{character Units}
 
 \item{hl}{numeric 1/Tolerance}
-
-\item{TFT}{data.table Transfer Functions Table}
 
 \item{DownFs}{integer Downsample Frequency}
 
@@ -62,8 +58,6 @@ buildTS(
 \item{Fpass_HP}{numeric High Pass Frequency}
 
 \item{Fstop_HP}{numeric High Stop Frequency}
-
-\item{RestoreScale}{boolean}
 
 \item{TargetUnits}{character Units}
 

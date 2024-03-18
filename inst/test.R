@@ -24,7 +24,6 @@ RECORD <- buildTS(
   DetrendAT=TRUE,
   DetrendVT=FALSE,
   DetrendDT=FALSE,
-  RestoreScale=FALSE,
   TargetUnits="mm",
   NW=2048,
   OVLP=75)
