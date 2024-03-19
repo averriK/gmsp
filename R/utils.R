@@ -1,3 +1,5 @@
+#' @importFrom data.table :=
+#' @importFrom data.table .
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
 #' @importFrom seewave stdft
@@ -9,12 +11,35 @@
 #' @noRd
 #'
 
+.taperA <- function(x){
+  stopifnot(is.vector(x))
+  n <- length(x)
+  Astop <- max(1e-4, min(abs(x)))
+  Apass <- max(1e-3, min(abs(x)))
 
-.taper <- function(x){
+  iH_stop <- which(abs(x) > Astop) |> first() # AT<PGAo/hl->stop
+  iL_stop <- which(abs(x) > Astop) |> last()
+  iH_pass <- which(abs(x) > Apass) |> first() # AT<PGAo/hl/2->pass
+  iL_pass <- which(abs(x) > Apass) |> last()
+
+  if (length(iH_pass) == 1 && length(iH_stop) == 1 && iH_pass > iH_stop) {
+    HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
+  } else {
+    HP <- rep(1, n)
+  }
+  if (length(iL_pass) == 1 && length(iL_stop) == 1 && iL_pass < iL_stop) {
+    LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
+  } else {
+    LP <- rep(1, n)
+  }
+  return(x * LP * HP)
+}
+
+.taperI <- function(x){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
-  iL_stop <- which(cumIA>=0.995)|> first()
-  iL_pass <- which(cumIA>=0.99)|> first()
+  iL_stop <- which(cumIA>=0.9995)|> first()
+  iL_pass <- which(cumIA>=0.995)|> first()
   LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.01, Apass = 0.99)
   iH_stop <- which(cumIA>=0.0005)|> first()
   iH_pass <- which(cumIA>=0.005)|> first()

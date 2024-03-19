@@ -3,15 +3,12 @@
 #' @param a data.table Time Series
 #' @param dt numeric Time Step
 #' @param UN character Units
-#' @param hl numeric 1/Tolerance
 #' @param DownFs integer Downsample Frequency
 #' @param UpFs integer Upsample Frequency
-#' @param FlatZerosAT boolean Flat Zeros Acceleration Time Series
+#' @param FlatZeros boolean Flat Zeros Acceleration Time Series
 #' @param DerivateDT boolean Derivate Displacements Time Series
 #' @param DerivateVT boolean Derivate Velocity Time Series
-#' @param DetrendAT boolean Detrend Acceleration Time Series
-#' @param DetrendVT boolean Detrend Velocity Time Series
-#' @param DetrendDT boolean Detrend Displacement Time Series
+#' @param Detrend boolean Detrend Acceleration Time Series
 #' @param Fpass_LP numeric Low Pass Frequency
 #' @param Fstop_LP numeric Low Stop Frequency
 #' @param Fpass_HP numeric High Pass Frequency
@@ -25,26 +22,29 @@
 #'
 #' @examples
 #'
-#' @import data.table
+#' @importFrom data.table :=
+#' @importFrom data.table .
+#' @importFrom data.table data.table
+#' @importFrom data.table is.data.table
 #' @importFrom seewave stdft
 #' @importFrom seewave istft
 #' @importFrom seewave ffilter
 #' @importFrom signal resample
-#' @importFrom pracma detrend
 #' @importFrom stringr str_split
 #' @importFrom purrr map
 #'
 #'
 buildTS <- function(
-    a, dt, UN = NULL, hl = 500, # AT<PGAo/500->0
-    DownFs = 0, UpFs = 0, FlatZerosAT = TRUE, DerivateDT = FALSE, DerivateVT = FALSE,
-    DetrendAT = TRUE, DetrendVT = FALSE, DetrendDT = FALSE,
+    a, dt, UN = NULL,
+    DownFs = 0, UpFs = 0, FlatZeros = TRUE, DerivateDT = FALSE, DerivateVT = FALSE,
+    Detrend = TRUE,
     Fpass_LP = 0, Fstop_LP = 0, Fpass_HP = 0, Fstop_HP = 0,
     TargetUnits = "mm", NW = 2048, OVLP = 75) {
   on.exit(expr = {
     rm(list = ls())
   }, add = TRUE)
 
+  . <- NULL
 
   OK <- is.data.table(a) # && !is.null(dt) && !is.null(UN)
   stopifnot(OK)
@@ -63,7 +63,7 @@ buildTS <- function(
   if (length(unique(OCID)) < 3) return(NULL)
 
 
-  ## Scale Units ----
+  ## Scale to TargetUnits (mm/s2) ----
 
   if (grepl(UN, pattern = "[///+]")) {
     UN <- (str_split(UN, pattern = "[///+]") |> unlist())[1]
@@ -89,38 +89,16 @@ buildTS <- function(
 
 
   ## Detrend ----
-  if (DetrendAT) {
-    AT[, (colnames(AT)) := lapply(.SD, function(x) {
-      pracma::detrend(x, tt = "linear")
-    })]
+  if (Detrend) {
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
 
 
   ## Flat Zeros & Taper  ----
-  if (FlatZerosAT == TRUE) {
-    # browser()
-    AT <- AT[, lapply(X = .SD, FUN = function(x) {
-      n <- length(x)
-      Astop <- max(PGAo / hl, min(x))
-      Apass <- max(PGAo / hl / 2, min(x))
-
-      iH_stop <- which(abs(x) > Astop) |> first() # AT<PGAo/hl->stop
-      iL_stop <- which(abs(x) > Astop) |> last()
-      iH_pass <- which(abs(x) > Apass) |> first() # AT<PGAo/hl/2->pass
-      iL_pass <- which(abs(x) > Apass) |> last()
-
-      if (length(iH_pass) == 1 && length(iH_stop) == 1 && iH_pass > iH_stop) {
-        HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
-      } else {
-        HP <- rep(1, n)
-      }
-      if (length(iL_pass) == 1 && length(iL_stop) == 1 && iL_pass < iL_stop) {
-        LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
-      } else {
-        LP <- rep(1, n)
-      }
-      return(x * LP * HP)
-    })]
+  # browser()
+  if (FlatZeros == TRUE) {
+    Wo <- .taperA(AT[[which.min(PGAo)]])
+    AT <- AT[,.(sapply(.SD, function(x) {x * Wo}))]
   }
 
 
@@ -130,15 +108,12 @@ buildTS <- function(
   if (UpFs != 0 && UpFs > Fs) {
     AT <- AT[, lapply(.SD, function(x) {
       x <- signal::resample(x, UpFs, Fs)
-      # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
 
     ## Detrend ----
-    if (DetrendAT) {
-      AT[, (colnames(AT)) := lapply(.SD, function(x) {
-        pracma::detrend(x, tt = "linear")
-      })]
+    if (Detrend) {
+      AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     }
 
     # Update Record
@@ -181,14 +156,11 @@ buildTS <- function(
       return(x)
     })]
 
-    ## Detrend ---
-    if (DetrendAT) {
-      AT <- AT[, lapply(.SD, function(x) {
-        x <- pracma::detrend(x, tt = "linear")
-        return(x)
-      })]
+    ## Detrend ----
+    if (Detrend) {
+      AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     }
-    names(AT) <- COLS
+
     # Update
     Fs <- DownFs
     dt <- 1 / Fs
@@ -252,15 +224,11 @@ buildTS <- function(
   COLS <- colnames(AT)
   AT <- AT[, lapply(.SD, function(x) {
     x <- ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = HP * LP, rescale = TRUE)
-    # x <- pracma::detrend(x,tt="linear")
     return(x)
   })]
   ## Detrend ----
-  if (DetrendAT) {
-    AT <- AT[, lapply(.SD, function(x) {
-      x <- pracma::detrend(x, tt = "linear")
-      return(x)
-    })]
+  if (Detrend) {
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   names(AT) <- COLS
 
@@ -292,7 +260,6 @@ buildTS <- function(
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-    # x <- pracma::detrend(x,tt="linear")
   })]
   names(VT) <- COLS
 
@@ -324,7 +291,6 @@ buildTS <- function(
   DT <- VT[, lapply(.SD, function(x) {
     x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-    # x <- pracma::detrend(x,tt="linear")
   })]
   names(DT) <- COLS
 
@@ -361,7 +327,6 @@ buildTS <- function(
     VT <- DT[, lapply(.SD, function(x) {
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
     names(VT) <- COLS
@@ -374,7 +339,6 @@ buildTS <- function(
     AT <- VT[, lapply(.SD, function(x) {
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HP * LP, rescale = TRUE)
-      # x <- pracma::detrend(x,tt="linear")
       return(x)
     })]
     names(AT) <- COLS
@@ -385,16 +349,15 @@ buildTS <- function(
 
 
 
-  ## Pack & Taper  ----
+  ##  Taper  ----
 
   NMX <- min(nrow(AT), nrow(VT), nrow(DT))
   AT <- AT[-((NMX):.N)]
   VT <- VT[-((NMX):.N)]
   DT <- DT[-((NMX):.N)]
-  PGA <- apply(AT, 2, function(x) {
-    max(abs(x))
-  })
-  Wo <- .taper(AT[[which.max(PGA)]])
+  PGA <- apply(AT, 2, function(x){max(abs(x))})
+  # Wo <- .taperIA(AT[[which.max(PGA)]])
+  Wo <- .taperI(AT[[which.min(PGAo)]])
 
   AT <- AT[,.(sapply(.SD, function(x) {x * Wo}))]
   VT <- VT[,.(sapply(.SD, function(x) {x * Wo}))]
@@ -402,7 +365,7 @@ buildTS <- function(
 
 
   ## Restore Scale ----
-  browser()
+  # browser()
   ATo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]
   VTo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]
   DTo <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * PGAo[i])]

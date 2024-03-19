@@ -1,9 +1,8 @@
 ID <- NULL
 X <- NULL
 Y <- NULL
-'.' <- NULL
-'..ICOLS' <- NULL
-'..COLS' <- NULL
+# ..ICOLS <- NULL
+# ..COLS <- NULL
 ARMS  <- NULL
 ATn  <- NULL
 ATo  <- NULL

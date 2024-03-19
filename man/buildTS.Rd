@@ -8,15 +8,12 @@ buildTS(
   a,
   dt,
   UN = NULL,
-  hl = 500,
   DownFs = 0,
   UpFs = 0,
-  FlatZerosAT = TRUE,
+  FlatZeros = TRUE,
   DerivateDT = FALSE,
   DerivateVT = FALSE,
-  DetrendAT = TRUE,
-  DetrendVT = FALSE,
-  DetrendDT = FALSE,
+  Detrend = TRUE,
   Fpass_LP = 0,
   Fstop_LP = 0,
   Fpass_HP = 0,
@@ -33,23 +30,17 @@ buildTS(
 
 \item{UN}{character Units}
 
-\item{hl}{numeric 1/Tolerance}
-
 \item{DownFs}{integer Downsample Frequency}
 
 \item{UpFs}{integer Upsample Frequency}
 
-\item{FlatZerosAT}{boolean Flat Zeros Acceleration Time Series}
+\item{FlatZeros}{boolean Flat Zeros Acceleration Time Series}
 
 \item{DerivateDT}{boolean Derivate Displacements Time Series}
 
 \item{DerivateVT}{boolean Derivate Velocity Time Series}
 
-\item{DetrendAT}{boolean Detrend Acceleration Time Series}
-
-\item{DetrendVT}{boolean Detrend Velocity Time Series}
-
-\item{DetrendDT}{boolean Detrend Displacement Time Series}
+\item{Detrend}{boolean Detrend Acceleration Time Series}
 
 \item{Fpass_LP}{numeric Low Pass Frequency}
 
