@@ -41,3 +41,6 @@ VRMS<- NULL
 VTn <- NULL
 VTo <- NULL
 VZC<- NULL
+Wo  <- NULL
+WoA  <- NULL
+WoI  <- NULL

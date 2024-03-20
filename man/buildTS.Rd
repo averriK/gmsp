@@ -7,17 +7,14 @@
 buildTS(
   a,
   dt,
-  UN = NULL,
-  DownFs = 0,
-  UpFs = 0,
+  UN,
+  Fmax = 25,
+  Resample = TRUE,
   FlatZeros = TRUE,
-  DerivateDT = FALSE,
-  DerivateVT = FALSE,
+  RebuildAT = FALSE,
   Detrend = TRUE,
-  Fpass_LP = 0,
-  Fstop_LP = 0,
-  Fpass_HP = 0,
-  Fstop_HP = 0,
+  TrimZeros = TRUE,
+  PadZeros = TRUE,
   TargetUnits = "mm",
   NW = 2048,
   OVLP = 75
@@ -30,25 +27,19 @@ buildTS(
 
 \item{UN}{character Units}
 
-\item{DownFs}{integer Downsample Frequency}
+\item{Fmax}{integer Maximum usable frequency}
 
-\item{UpFs}{integer Upsample Frequency}
+\item{Resample}{boolean Add Zeros to Acceleration Time Series}
 
 \item{FlatZeros}{boolean Flat Zeros Acceleration Time Series}
 
-\item{DerivateDT}{boolean Derivate Displacements Time Series}
-
-\item{DerivateVT}{boolean Derivate Velocity Time Series}
+\item{RebuildAT}{boolean Derivate Displacements and Velocity Time Series}
 
 \item{Detrend}{boolean Detrend Acceleration Time Series}
 
-\item{Fpass_LP}{numeric Low Pass Frequency}
+\item{TrimZeros}{boolean Trim Zeros Acceleration Time Series}
 
-\item{Fstop_LP}{numeric Low Stop Frequency}
-
-\item{Fpass_HP}{numeric High Pass Frequency}
-
-\item{Fstop_HP}{numeric High Stop Frequency}
+\item{PadZeros}{boolean Add Zeros to Acceleration Time Series}
 
 \item{TargetUnits}{character Units}
 

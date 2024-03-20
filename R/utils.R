@@ -1,5 +1,4 @@
 #' @importFrom data.table :=
-#' @importFrom data.table .
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
 #' @importFrom seewave stdft
@@ -11,29 +10,31 @@
 #' @noRd
 #'
 
-.taperA <- function(x){
+.taperA <- function(x,Astop=0.5e-3,Apass=1e-3){
   stopifnot(is.vector(x))
   n <- length(x)
-  Astop <- max(1e-4, min(abs(x)))
-  Apass <- max(1e-3, min(abs(x)))
+  iH_stop <- which(abs(x) > Astop) |> first()
+  iH_stop <- ifelse(is.na(iH_stop), 1, iH_stop)
 
-  iH_stop <- which(abs(x) > Astop) |> first() # AT<PGAo/hl->stop
+  iH_pass <- which(abs(x) > Apass) |> first()
+  iH_pass <- ifelse(is.na(iH_pass), 1, iH_pass)
+  iH_pass <- max(iH_pass, iH_stop+1L)
+  stopifnot( iH_pass > iH_stop)
+
+
   iL_stop <- which(abs(x) > Astop) |> last()
-  iH_pass <- which(abs(x) > Apass) |> first() # AT<PGAo/hl/2->pass
-  iL_pass <- which(abs(x) > Apass) |> last()
+  iL_stop <- ifelse(is.na(iL_stop), n, iL_stop)
 
-  if (length(iH_pass) == 1 && length(iH_stop) == 1 && iH_pass > iH_stop) {
-    HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
-  } else {
-    HP <- rep(1, n)
-  }
-  if (length(iL_pass) == 1 && length(iL_stop) == 1 && iL_pass < iL_stop) {
-    LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
-  } else {
-    LP <- rep(1, n)
-  }
-  return(x * LP * HP)
+  iL_pass <- which(abs(x) > Apass) |> last()
+  iL_pass <- ifelse(is.na(iL_pass), n, iL_pass)
+  iL_pass <- min(iL_pass, iL_stop-1L)
+  stopifnot( iL_pass < iL_stop)
+
+  HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
+  LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
+  return(LP * HP)
 }
+
 
 .taperI <- function(x){
   n <- length(x)

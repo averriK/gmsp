@@ -4,7 +4,6 @@ library(data.table)
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
-
 }
 
 RSN.TARGET <- 1500  #577 300 1500 1540
@@ -17,22 +16,19 @@ RECORD <- buildTS(
   a=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  DownFs=250,
-  FlatZeros=TRUE,
-  DerivateDT=FALSE,
-  DerivateVT=FALSE,
+  Fmax=20,
   Detrend=TRUE,
   TargetUnits="mm",
   NW=2048,
   OVLP=75)
-TS <- RECORD$TS$I
+TS <- RECORD$TS
 dt <- RECORD$dt
-ts <- seq(0,dt*(nrow(TS)-1),dt)
-TS <- data.table(ts=ts,TS)
+ts <- RECORD$ts
+AUX <- data.table(ts,TS)
 # saveRDS((RAW$AT),file.path(RecordsFolder,"data-raw/AT.Rds"))
-IVARS <- c("ts","W")
-MVARS <- colnames(TS[, -c("ts","W")])
-DT.TS <- data.table::melt(TS, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+IVARS <- c("ts")
+MVARS <- colnames(AUX[, -c("ts")])
+DT.TS <- data.table::melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
 DT.TS <- DT.TS[,.(X=ts,Y=value,ID=variable)]
 DATA <- DT.TS[ID==ID_TARGET]
 # plot.highchart(DATA, plot.type = "line")
