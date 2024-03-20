@@ -1,18 +1,21 @@
-#' Title
+#' buildTS
 #'
-#' @param a data.table Time Series
-#' @param dt numeric Time Step
-#' @param UN character Units
-#' @param Fmax integer Maximum usable frequency
-#' @param FlatZeros boolean Flat Zeros Acceleration Time Series
-#' @param TrimZeros boolean Trim Zeros Acceleration Time Series
-#' @param PadZeros boolean Add Zeros to Acceleration Time Series
-#' @param Resample boolean Add Zeros to Acceleration Time Series
-#' @param RebuildAT boolean Derivate Displacements and Velocity Time Series
-#' @param Detrend boolean Detrend Acceleration Time Series
+#' @param x data.table
+#' @param dt numeric
+#' @param UN character
+#' @param Fmax integer
+#' @param FlatZeros boolean
+#' @param PadZeros boolean
+#' @param TrimZeros boolean
+#' @param Modes numeric
+#' @param Resample boolean
+#' @param Detrend boolean
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
-#' @param OVLP integer Overlap
+#' @param OVLP integer
+#' @param Astop numeric
+#' @param Apass numeric
+
 #'
 #' @return data.table
 #' @export buildTS
@@ -20,8 +23,10 @@
 #' @examples
 #'
 #' @importFrom data.table :=
+#' @importFrom stats na.omit
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
+#' @importFrom data.table melt
 #' @importFrom seewave stdft
 #' @importFrom seewave istft
 #' @importFrom seewave ffilter
@@ -31,25 +36,26 @@
 #'
 #'
 buildTS <- function(
-    a, dt, UN,
+    x, dt, UN, Modes=NULL,
     Fmax = 25,
     Resample = TRUE,
     FlatZeros = TRUE,
-    RebuildAT = FALSE,
-    Detrend = TRUE,
     TrimZeros = TRUE,
+    Detrend = TRUE,
     PadZeros=TRUE,
     TargetUnits = "mm",
     NW = 2048,
-    OVLP = 75) {
+    OVLP = 75,
+    Astop=1e-4,
+    Apass=1e-3) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
 
-  OK <- is.data.table(a) && !is.null(dt) && !is.null(UN)
+  OK <- is.data.table(x) && !is.null(dt) && !is.null(UN)
   stopifnot(OK)
 
-  ATo <- copy(a)
+  ATo <- copy(x)
   ## Check Record ----
   NP <- nrow(ATo)
   if (  NP == 0 ||dt == 0 ||any(is.na(ATo)) ||max(abs(ATo)) == 0 ) return(NULL)
@@ -89,8 +95,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
     names(AT) <- OCID
   }
@@ -139,8 +144,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     names(AT) <- OCID
   }
@@ -178,7 +182,10 @@ buildTS <- function(
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(VT) <- OCID
-
+  if (Detrend) {
+    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    # names(AT) <- OCID
+  }
 
   ## Integrate VT ----
   DT <- VT[, lapply(.SD, function(x) {
@@ -190,9 +197,67 @@ buildTS <- function(
 
 
 
-  # Derivate DT   ----
-  if (RebuildAT) {
-    COLS <- colnames(AT)
+
+  ## Flat Zeros (A+I)  ----
+  if (FlatZeros == TRUE) {
+    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
+    names(AT) <- OCID
+  }
+
+
+  ## Homogeinize rows ----
+  # browser()
+  NMX <- min(nrow(AT), nrow(VT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
+
+  ## Flat Zeros (A+I)  ----
+  if (FlatZeros == TRUE) {
+    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
+    # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    # browser()
+    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+    names(AT) <- OCID
+    names(VT) <- OCID
+    names(DT) <- OCID
+  }
+
+
+
+  ## Restore Scale ----
+  # browser()
+  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  names(AT) <- OCID
+  names(VT) <- OCID
+  names(DT) <- OCID
+
+  ## Pack Time Series - Wide Format ----
+  NP <-  nrow(AT)
+  ts <- seq(0,dt*(NP-1),dt)
+  TSW <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
+  ## Pack Time Series - Long Format ----
+
+  IVARS <- c("ts")
+  MVARS <- colnames(TSW[, -c("ts")])
+  AUX <- data.table::melt(TSW, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+  TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
+  ## Trim Records, keep time series ----
+  if(TrimZeros){
+  TSL <- TSL[,.trimI(.SD),by=c("OCID","ID")]}
+
+  # Rebuild AT   ----
+  # browser()
+  if(!is.null(Modes)){
+    OCID <- colnames(AT)
     VT <- DT[, lapply(.SD, function(x) {
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
@@ -210,76 +275,13 @@ buildTS <- function(
   }
   if (Detrend) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-    # names(AT) <- OCID
-  }
-  ## Flat Zeros (A+I)  ----
-  if (FlatZeros == TRUE) {
-    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
-    names(AT) <- OCID
+
   }
 
-
-  ## Homogeinize rows ----
-  # browser()
-  NMX <- min(nrow(AT), nrow(VT), nrow(DT))
-  AT <- AT[-((NMX):.N)]
-  VT <- VT[-((NMX):.N)]
-  DT <- DT[-((NMX):.N)]
-
-  ## Flat Zeros (A+I)  ----
-  if (FlatZeros == TRUE) {
-    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
-    # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-    # browser()
-    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-
-    names(AT) <- OCID
-    names(VT) <- OCID
-    names(DT) <- OCID
-  }
-
-  ## Trim Zeros
-  if(TrimZeros){
-    # browser()
-    I <- Wo[, lapply(seq_along(.SD), function(i) {
-      idx <- which(.SD[[i]]!=0) |> first()
-      idx <- max(idx,2)
-      return(idx)
-    })] |> min()
-    J <- Wo[, lapply(seq_along(.SD), function(i) {
-      n <- length(.SD[[i]])
-      idx <- which(.SD[[i]]!=0) |> last()
-      idx <- min(idx,n-1)
-      return(idx)
-    })] |> max()
-    AT <- AT[(I-1):(J+1)]
-    VT <- VT[(I-1):(J+1)]
-    DT <- DT[(I-1):(J+1)]
-    Wo <- Wo[(I-1):(J+1)]
-  }
-
-  ## Restore Scale ----
-  # browser()
-  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  names(AT) <- OCID
-  names(VT) <- OCID
-  names(DT) <- OCID
-
-  ## Pack Time Series
-  TS <- data.table( AT = AT, VT = VT, DT = DT)
+  ## Return
   Fs <- 1 / dt
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
-  NP <-  nrow(TS)
-  ts <- seq(0,dt*(NP-1),dt)
 
-  ## Return
-  return(list(TS = TS, ts=ts,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
+  return(list(TSW = TSW, TSL=TSL,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
 }

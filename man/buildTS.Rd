@@ -2,54 +2,60 @@
 % Please edit documentation in R/buildTS.R
 \name{buildTS}
 \alias{buildTS}
-\title{Title}
+\title{buildTS}
 \usage{
 buildTS(
-  a,
+  x,
   dt,
   UN,
+  Modes = NULL,
   Fmax = 25,
   Resample = TRUE,
   FlatZeros = TRUE,
-  RebuildAT = FALSE,
-  Detrend = TRUE,
   TrimZeros = TRUE,
+  Detrend = TRUE,
   PadZeros = TRUE,
   TargetUnits = "mm",
   NW = 2048,
-  OVLP = 75
+  OVLP = 75,
+  Astop = 1e-04,
+  Apass = 0.001
 )
 }
 \arguments{
-\item{a}{data.table Time Series}
+\item{x}{data.table}
 
-\item{dt}{numeric Time Step}
+\item{dt}{numeric}
 
-\item{UN}{character Units}
+\item{UN}{character}
 
-\item{Fmax}{integer Maximum usable frequency}
+\item{Modes}{numeric}
 
-\item{Resample}{boolean Add Zeros to Acceleration Time Series}
+\item{Fmax}{integer}
 
-\item{FlatZeros}{boolean Flat Zeros Acceleration Time Series}
+\item{Resample}{boolean}
 
-\item{RebuildAT}{boolean Derivate Displacements and Velocity Time Series}
+\item{FlatZeros}{boolean}
 
-\item{Detrend}{boolean Detrend Acceleration Time Series}
+\item{TrimZeros}{boolean}
 
-\item{TrimZeros}{boolean Trim Zeros Acceleration Time Series}
+\item{Detrend}{boolean}
 
-\item{PadZeros}{boolean Add Zeros to Acceleration Time Series}
+\item{PadZeros}{boolean}
 
 \item{TargetUnits}{character Units}
 
 \item{NW}{integer Windows Length}
 
-\item{OVLP}{integer Overlap}
+\item{OVLP}{integer}
+
+\item{Astop}{numeric}
+
+\item{Apass}{numeric}
 }
 \value{
 data.table
 }
 \description{
-Title
+buildTS
 }

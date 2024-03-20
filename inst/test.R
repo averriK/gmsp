@@ -6,37 +6,36 @@ if(!exists("SET")){
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
 
-RSN.TARGET <- 1500  #577 300 1500 1540
-ID_TARGET <- "AT.H1"
+RSN.TARGET <- 1540  #577 300 1500 1540
+ID_TARGET <- "DT"
+OCID_TARGET <- "H1"
 COMPLETE <- FALSE
 
 # -----
 RAW <- SET[[RSN.TARGET]] #577 300 1500
 RECORD <- buildTS(
-  a=RAW$AT,
+  RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
   Fmax=20,
+  TrimZeros=FALSE,
   Detrend=TRUE,
+  PadZeros=TRUE,
   TargetUnits="mm",
-  NW=2048,
-  OVLP=75)
-TS <- RECORD$TS
+  NW=1024,
+  OVLP=75,
+  Astop=0.5e-4,
+  Apass=1e-3)
+TSL <- RECORD$TSL
 dt <- RECORD$dt
-ts <- RECORD$ts
-AUX <- data.table(ts,TS)
-# saveRDS((RAW$AT),file.path(RecordsFolder,"data-raw/AT.Rds"))
-IVARS <- c("ts")
-MVARS <- colnames(AUX[, -c("ts")])
-DT.TS <- data.table::melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-DT.TS <- DT.TS[,.(X=ts,Y=value,ID=variable)]
-DATA <- DT.TS[ID==ID_TARGET]
-# plot.highchart(DATA, plot.type = "line")
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+
+
+DATA.TS <- TSL[ID=="AT" & OCID=="H1",.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)
 
 # -----
-s <- DT.TS[ID==ID_TARGET]$Y
-t <- DT.TS[ID==ID_TARGET]$X
+s <- DATA$Y
+t <- DATA$X
 NIT <- 10
 NIMF <- 8
 n <- 6# n<0
@@ -55,24 +54,22 @@ if(COMPLETE){
   M <- IMF$averaged.imfs
 }
 
-## Cheaper version
-
-
-# ----
-# PLOT IMF
 OFFSET <- 1.25*ceiling(max(M)-min(M))
 for(i in 1:ncol(M)){
   j <- ncol(M)-i+1
   M[,j] <- M[,j]+OFFSET*i
 }
-DATA <- as.data.table(M)
-DATA[,`:=`(t=IMF$tt,"Residue"=IMF$residue,"Signal"=IMF$original.signal+OFFSET*(ncol(M)+2))]
-setnames(DATA,old=colnames(DATA),new=stringr::str_replace(colnames(DATA),pattern = "V","IMF-"))
+AUX <- as.data.table(M)
+AUX[,`:=`(t=IMF$tt,"Residue"=IMF$residue,"Signal"=IMF$original.signal+OFFSET*(ncol(M)+2))]
+setnames(AUX,old=colnames(AUX),new=stringr::str_replace(colnames(AUX),pattern = "V","IMF-"))
 
 IVARS <- c("t")
-MVARS <- colnames(DATA[, -c("t")])
-DATA <- melt(DATA, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-DATA <- DATA[,.(X=t,Y=value,ID=variable)]
+MVARS <- colnames(AUX[, -c("t")])
+AUX2 <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+DATA.IMF <- AUX2[,.(X=t,Y=value,ID=variable)]
+
+
+
 plot.highchart(
   color.palette ="ag_Sunset",
   yAxis.label =FALSE,
@@ -82,18 +79,18 @@ plot.highchart(
   legend.show=TRUE,
   yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
   yAxis.min=-OFFSET,
-  data=DATA)
+  data=DATA.IMF)
 
 
 # ----
 # Remove IMF 5,6,7 y residuos
 
-DATA <- data.table(X=IMF$tt,M)
-DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
-imf_target <- c(2,3)
+# AUX <- data.table(X=IMF$tt,M)
+# DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
+imf_target <- c(1,2,3,4)
 COLS <- paste0("V",imf_target)
-DATA <- DATA[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+DATA.IMF.R <- DT.IMF[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
+plot.ggplot2(DATA.IMF.R, plot.type = "line",line.size=0.5)
 
 
 # ------

@@ -1,4 +1,5 @@
 #' @importFrom data.table :=
+#' @importFrom stats na.omit
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
 #' @importFrom seewave stdft
@@ -10,7 +11,34 @@
 #' @noRd
 #'
 
-.taperA <- function(x,Astop=0.5e-3,Apass=1e-3){
+.buildEEMD <- function(s,t,nit=10,nimf=10,n,namp=0.5e-7,ntype="gaussian",complete=FALSE){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  if(!complete){
+    TMP <- tempdir(check = TRUE)
+    hht::EEMD(sig=s, tt=t, noise.amp= namp, noise.type=, trials=nit, nimf=nimf, trials.dir = TMP )
+    IMF <- hht::EEMDCompile(trials=NIT, nimf=NIMF, trials.dir = TMP)
+    unlink(TMP)
+    M <- IMF$averaged.imfs
+  } else {
+    IMF <- hht::CEEMD(sig=s, tt=t, noise.amp=namp, trials=nit, verbose = TRUE, noise.type=ntype)
+    M <- IMF$imf
+  }
+
+
+}
+
+.trimI <- function(.SD,COL="s"){
+  n <- nrow(.SD)
+  idx <- which(.SD[[COL]]!=0) |> first()
+  START <- max(idx,2)
+  idx <- which(.SD[[COL]]!=0) |> last()
+  END <- min(idx,n-1)
+  return(.SD[(START-1):(END+1)])
+
+
+}
+
+.taperA <- function(x,Astop=1e-4,Apass=1e-3){
   stopifnot(is.vector(x))
   n <- length(x)
   iH_stop <- which(abs(x) > Astop) |> first()
@@ -36,14 +64,14 @@
 }
 
 
-.taperI <- function(x){
+.taperI <- function(x,Lstop=0.005,Lpass=0.01,Hstop=0.99,Hpass=0.995){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
-  iL_stop <- which(cumIA>=0.9995)|> first()
-  iL_pass <- which(cumIA>=0.995)|> first()
+  iL_stop <- which(cumIA>=Lstop)|> first()#0.005
+  iL_pass <- which(cumIA>=Lpass)|> first()#0.01
   LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.01, Apass = 0.99)
-  iH_stop <- which(cumIA>=0.0005)|> first()
-  iH_pass <- which(cumIA>=0.005)|> first()
+  iH_stop <- which(cumIA>=Hstop)|> first()#0.99
+  iH_pass <- which(cumIA>=Hpass)|> first()#0.995
   HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.01, Apass = 0.99)
   return(HP*LP)
 

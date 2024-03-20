@@ -17,7 +17,8 @@ Imports:
     stringr,
     purrr,
     digest,
-    spectral
+    spectral,
+    hht
 Depends: 
     R (>= 3.5)
 LazyData: true

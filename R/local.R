@@ -1,8 +1,8 @@
 ID <- NULL
 X <- NULL
 Y <- NULL
-# ..ICOLS <- NULL
-# ..COLS <- NULL
+value <- NULL
+variable <- NULL
 ARMS  <- NULL
 ATn  <- NULL
 ATo  <- NULL
@@ -44,3 +44,6 @@ VZC<- NULL
 Wo  <- NULL
 WoA  <- NULL
 WoI  <- NULL
+namp  <- NULL
+NIMF  <- NULL
+NIT  <- NULL
