@@ -5,11 +5,7 @@ if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
-
 RSN_TARGET <- 577  #577 300 1500 1540
-ID_TARGET <- "AT"
-OCID_TARGET <- "H1"
-COMPLETE <- FALSE
 
 # -----
 RAW <- SET[[RSN_TARGET]] #577 300 1500
@@ -17,33 +13,66 @@ RECORD <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  Fmax=20,
-  TrimZeros=TRUE,
-  DetrendAT=TRUE,
-  DetrendVT=TRUE,
-  DetrendDT=TRUE,
-  PadZeros=TRUE,
+  Fmax=25,
+  TrimZeros = TRUE,
+  Rebuild_AT = TRUE,
   TargetUnits="mm",
-  NW=1024,
+  RemoveFirstIMF_AT = FALSE,
+  RemoveLastIMF_AT = TRUE,
+  RemoveFirstIMF_VT = FALSE,
+  RemoveLastIMF_VT = FALSE,
+  RemoveFirstIMF_DT = FALSE,
+  RemoveLastIMF_DT = TRUE,
+  NW=2048,
   OVLP=75)
 TSL <- RECORD$TSL
-TSW <- RECORD$TSW
-dt <- RECORD$dt
+
+ID_TARGET <- "AT"
+OCID_TARGET <- "UP"
+DATA.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)
+
+xplot::plot.highchart(
+  color.palette ="Blue-Red",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
+  data=DATA.TS)
 
 
-DATA <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
-
+s <- DT.TS$Y
+t <- DT.TS$X
 # -----
-s <- DATA$Y
-t <- DATA$X
-IMF <- .getEMD(t=t,s=s)
-DATA <- data.table(X=IMF$t,Y=IMF$sR,ID="Filtered")
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+
+AUX <- .buildIMF(t=t,s=s)
+IMF <- AUX$imf
+nimf <- ncol(IMF)
+sR <- IMF[,-c(1),with = FALSE][,rowSums(.SD)]
+DATA <- rbindlist(list(DATA.TS,data.table(X=t,Y=sR,ID="Filtered")))
+xplot::plot.highchart(
+  color.palette ="Blue-Red",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
+  data=DATA)
 
 
-PLOT <- .plotEMD(IMF)
-PLOT
+DATA <- AUX$plot.data
+offset <- AUX$plot.offset
+xplot::plot.highchart(
+  color.palette ="ag_Sunset",
+  yAxis.label =FALSE,
+  plot.height = max(1000,100*nimf),
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
+  yAxis.min=offset,
+  data=DATA)
 # ----
 
 

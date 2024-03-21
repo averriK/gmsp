@@ -1,6 +1,7 @@
 ID <- NULL
 X <- NULL
 Y <- NULL
+s <- NULL
 value <- NULL
 variable <- NULL
 ARMS  <- NULL

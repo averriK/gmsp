@@ -8,16 +8,23 @@ buildTS(
   x,
   dt,
   UN,
-  Modes = NULL,
   Fmax = 25,
   Resample = TRUE,
   FlatZeros = TRUE,
   TrimZeros = TRUE,
-  DetrendAT = TRUE,
-  DetrendVT = TRUE,
-  DetrendDT = TRUE,
+  Detrend_AT = TRUE,
+  Detrend_VT = FALSE,
+  Detrend_DT = FALSE,
   PadZeros = TRUE,
+  RemoveFirstIMF_AT = FALSE,
+  RemoveLastIMF_AT = TRUE,
+  RemoveFirstIMF_VT = FALSE,
+  RemoveLastIMF_VT = TRUE,
+  RemoveFirstIMF_DT = FALSE,
+  RemoveLastIMF_DT = TRUE,
+  Rebuild_AT = FALSE,
   TargetUnits = "mm",
+  taper = 2,
   NW = 2048,
   OVLP = 75
 )
@@ -29,8 +36,6 @@ buildTS(
 
 \item{UN}{character}
 
-\item{Modes}{numeric}
-
 \item{Fmax}{integer}
 
 \item{Resample}{boolean}
@@ -39,15 +44,31 @@ buildTS(
 
 \item{TrimZeros}{boolean}
 
-\item{DetrendAT}{boolean}
+\item{Detrend_AT}{boolean}
 
-\item{DetrendVT}{boolean}
+\item{Detrend_VT}{boolean}
 
-\item{DetrendDT}{boolean}
+\item{Detrend_DT}{boolean}
 
 \item{PadZeros}{boolean}
 
+\item{RemoveFirstIMF_AT}{boolean}
+
+\item{RemoveLastIMF_AT}{boolean}
+
+\item{RemoveFirstIMF_VT}{boolean}
+
+\item{RemoveLastIMF_VT}{boolean}
+
+\item{RemoveFirstIMF_DT}{boolean}
+
+\item{RemoveLastIMF_DT}{boolean}
+
+\item{Rebuild_AT}{boolean}
+
 \item{TargetUnits}{character Units}
+
+\item{taper}{integer}
 
 \item{NW}{integer Windows Length}
 

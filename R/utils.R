@@ -1,4 +1,3 @@
-#' @importFrom data.table :=
 #' @importFrom stats na.omit
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
@@ -8,16 +7,17 @@
 #' @importFrom utils tail
 #' @importFrom digest digest
 #' @importFrom spectral spec.fft
-#' @importFrom EMD eemd
+#' @importFrom EMD emd
+#' @importFrom hht CEEMD
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
 
-.plotEMD <- function(IMF){
+.buildPlotIMF <- function(imf){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
-  M <- IMF$imf
+  M <- imf
   offset <- 1.25*ceiling(max(M)-min(M))
   nimf <- ncol(M)
   for(i in 1:nimf){
@@ -26,7 +26,7 @@
   }
 
 
-  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s+offset*(nimf+2),M)
+  AUX <- data.table(t=imf$t,"Residue"=imf$residue,"Signal"=imf$s+offset*(nimf+2),M)
   IVARS <- c("t")
   MVARS <- colnames(AUX[, -c("t")])
   DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
@@ -43,8 +43,9 @@
     data=DATA)
 }
 
-.getEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
+.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
+
 
   . <- NULL
   if(is.null(dt) & !is.null(t)){
@@ -57,9 +58,15 @@
   }
 
   stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
+  # Trim Zeros
+
+  DT <- data.table(t=t,s=s)
+  n <- nrow(DT)
+  DT <- .trimZeros(DT)
+
   # browser()
   if(tolower(model)=="eemd"){
-    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
     M <- AUX$imf  |> as.data.table()
     NC <- ncol(M)
     RES <- M[[NC]] |> unname()
@@ -67,32 +74,60 @@
   }
 
   if(tolower(model)=="ceemd"){
-    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
+    AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
     IMF <- AUX$imf |> as.data.table()
     RES <- AUX$residue |> unname()
+    M <- data.table(IMF,RES)
   }
   names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+
   # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
   Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-# remove IMF1, IMF(n) and residue
-  # browser()
-  nimf <- ncol(IMF)
-  sR <- IMF[,-c(1,nimf),with = FALSE][,rowSums(.SD)]
-  return(list(s=s,t=t,sR=sR,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
 
+  DATA <- NULL
+  if(plot==TRUE){
+    offset <- 1.25*ceiling(max(M)-min(M))
+
+    nm <- ncol(M)
+    for(i in 1:nm){
+      j <- nm-i+1
+      M[[j]] <- M[[j]]+offset*i
+    }
+
+    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nm+2),M)
+    ivars <- c("t")
+    mvars <- colnames(AUX[, -c("t")])
+    DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
+    DATA <- DATA[,.(X=t,Y=value,ID=variable)]
+  }
+# Restore zeros
+  nimf <- ncol(IMF)
+  i <- as.integer(DT$t[1]/dt)
+  j <- as.integer(last(DT$t)/dt)
+
+  RES=c(rep(0,times=i-1),RES)
+  # browser()
+
+  RES <- c(RES,rep(0,times=n-length(RES)))
+
+  Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
+  Oj <- data.table(matrix(0, nrow = i-1, ncol = ncol(IMF)))
+  IMF <- rbindlist(list(Oj,IMF,Oi),use.names = FALSE)
+  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=nimf,residue=RES,plot.data=DATA,plot.offset=offset))
 }
 
 
-.trimI <- function(.SD,COL="s"){
+
+.trimZeros <- function(.SD,COL="s",offset=0){
   n <- nrow(.SD)
   idx <- which(.SD[[COL]]!=0) |> first()
-  START <- max(idx,2)
+  START <- max(idx,2+offset)
   idx <- which(.SD[[COL]]!=0) |> last()
-  END <- min(idx,n-1)
-  return(.SD[(START-1):(END+1)])
+  END <- min(idx,n-offset)
+  return(.SD[(START-offset):(END+offset)])
 
 
 }
@@ -233,7 +268,7 @@
 }
 
 .getIA <- function(x,dt,g){
- as.numeric(x %*% x)*dt*pi/(2*g)
+  as.numeric(x %*% x)*dt*pi/(2*g)
 }
 
 .getSF <- function(SourceUnits,TargetUnits,g_mms2=9806.650){
