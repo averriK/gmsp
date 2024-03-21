@@ -13,11 +13,11 @@
 #' @noRd
 #'
 
-.plotEMD <- function(IMF){
+.buildPlotIMF <- function(imf){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
-  M <- IMF$imf
+  M <- imf
   offset <- 1.25*ceiling(max(M)-min(M))
   nimf <- ncol(M)
   for(i in 1:nimf){
@@ -26,7 +26,7 @@
   }
 
 
-  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s+offset*(nimf+2),M)
+  AUX <- data.table(t=imf$t,"Residue"=imf$residue,"Signal"=imf$s+offset*(nimf+2),M)
   IVARS <- c("t")
   MVARS <- colnames(AUX[, -c("t")])
   DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
@@ -43,7 +43,7 @@
     data=DATA)
 }
 
-.getEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
+.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
@@ -77,13 +77,68 @@
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-# remove IMF1, IMF(n) and residue
+  offset <- 1.25*ceiling(max(M)-min(M))
+  nimf <- ncol(M)
+  for(i in 1:nimf){
+    j <- nimf-i+1
+    M[[j]] <- M[[j]]+offset*i
+  }
+
+
+  AUX <- data.table(t=t,"Residue"=RES,"Signal"=s+offset*(nimf+2),M)
+  ivars <- c("t")
+  mvars <- colnames(AUX[, -c("t")])
+  DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
+  DATA <- DATA[,.(X=t,Y=value,ID=variable)]
+
+  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES,plot.data=DATA,plot.offset=offset))
+}
+
+
+.filterEEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
+
+  . <- NULL
+  if(is.null(dt) & !is.null(t)){
+    dt <- t[2]-t[1]
+  }
+
+  if(is.null(t) & !is.null(dt)){
+    n <- length(s)
+    t <- seq(0,(n-1)*dt,by=dt)
+  }
+
+  stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
+  # browser()
+  if(tolower(model)=="eemd"){
+    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    M <- AUX$imf  |> as.data.table()
+    NC <- ncol(M)
+    RES <- M[[NC]] |> unname()
+    IMF <- M[,-NC,with = FALSE]
+  }
+
+  if(tolower(model)=="ceemd"){
+    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
+    IMF <- AUX$imf |> as.data.table()
+    RES <- AUX$residue |> unname()
+  }
+  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+  # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
+  Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
+  wm <- 2*pi/Tm
+  fm <- 1/Tm
+  PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
+  # remove IMF1, IMF(n) and residue
   # browser()
   nimf <- ncol(IMF)
   sR <- IMF[,-c(1,nimf),with = FALSE][,rowSums(.SD)]
   return(list(s=s,t=t,sR=sR,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
 
 }
+
+
+
 
 
 .trimI <- function(.SD,COL="s"){
@@ -233,7 +288,7 @@
 }
 
 .getIA <- function(x,dt,g){
- as.numeric(x %*% x)*dt*pi/(2*g)
+  as.numeric(x %*% x)*dt*pi/(2*g)
 }
 
 .getSF <- function(SourceUnits,TargetUnits,g_mms2=9806.650){

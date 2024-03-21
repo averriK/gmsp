@@ -31,19 +31,39 @@ TSW <- RECORD$TSW
 dt <- RECORD$dt
 
 
-DATA <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
-
+DT.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+plot.ggplot2(DT.TS, plot.type = "line",line.size=0.5)
+s <- DT.TS$Y
+t <- DT.TS$X
 # -----
-s <- DATA$Y
-t <- DATA$X
-IMF <- .getEMD(t=t,s=s)
-DATA <- data.table(X=IMF$t,Y=IMF$sR,ID="Filtered")
-plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+
+AUX <- .buildIMF(t=t,s=s)
+IMF <- AUX$imf
+nimf <- ncol(IMF)
+sR <- IMF[,-c(1),with = FALSE][,rowSums(.SD)]
+DATA <- rbindlist(list(DT.TS,data.table(X=t,Y=sR,ID="Filtered")))
+xplot::plot.highchart(
+  color.palette ="Blue-Red",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
+  data=DATA)
 
 
-PLOT <- .plotEMD(IMF)
-PLOT
+DATA <- AUX$plot.data
+offset <- AUX$plot.offset
+xplot::plot.highchart(
+  color.palette ="ag_Sunset",
+  yAxis.label =FALSE,
+  plot.height = max(1000,100*nimf),
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
+  yAxis.min=offset,
+  data=DATA)
 # ----
 
 

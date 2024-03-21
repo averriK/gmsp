@@ -36,7 +36,7 @@
 #'
 #'
 buildTS <- function(
-    x, dt, UN, Modes=NULL,
+    x, dt, UN,
     Fmax = 25,
     Resample = TRUE,
     FlatZeros = TRUE,
@@ -45,6 +45,9 @@ buildTS <- function(
     DetrendVT = TRUE,
     DetrendDT = TRUE,
     PadZeros=TRUE,
+    RemoveIMF1 = TRUE,
+    RemoveIMFn = TRUE,
+    RebuildAT = FALSE,
     TargetUnits = "mm",
     NW = 2048,
     OVLP = 75) {
@@ -176,6 +179,11 @@ buildTS <- function(
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
 
+  ## Build EEMD
+  # AT <- AT[, lapply(.SD, function(x) {
+  #   x <- .eemdfilter(x)
+  #   x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+  # })]
   ## Integrate AT ----
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
@@ -196,6 +204,30 @@ buildTS <- function(
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
 
+  ## Rebuild AT   ----
+  # browser()
+  if(RebuildAT){
+    OCID <- colnames(AT)
+    VT <- DT[, lapply(.SD, function(x) {
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
+    })]
+    names(VT) <- OCID
+    if (DetrendVT) {
+      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    }
+    COLS <- colnames(AT)
+    AT <- VT[, lapply(.SD, function(x) {
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
+    })]
+    names(AT) <- OCID
+  }
+  if (DetrendAT) {
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
 
 
 
@@ -208,7 +240,7 @@ buildTS <- function(
   }
 
 
-  ## Homogeinize rows ----
+  ## Homogenize rows ----
   # browser()
   NMX <- min(nrow(AT), nrow(VT), nrow(DT))
   AT <- AT[-((NMX):.N)]
@@ -253,32 +285,8 @@ buildTS <- function(
   if(TrimZeros){
   TSL <- TSL[,.trimI(.SD),by=c("OCID","ID")]}
 
-  # Rebuild AT   ----
-  # browser()
-  if(!is.null(Modes)){
-    OCID <- colnames(AT)
-    VT <- DT[, lapply(.SD, function(x) {
-      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      return(x)
-    })]
-    names(VT) <- OCID
-    if (DetrendVT) {
-      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
-    }
-    COLS <- colnames(AT)
-    AT <- VT[, lapply(.SD, function(x) {
-      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      return(x)
-    })]
-    names(AT) <- OCID
-  }
-  if (DetrendAT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
 
-  ## Return
+  ## Return ----
   Fs <- 1 / dt
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
