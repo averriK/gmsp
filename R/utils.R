@@ -8,11 +8,15 @@
 #' @importFrom utils tail
 #' @importFrom digest digest
 #' @importFrom spectral spec.fft
+#' @importFrom EMD eemd
+#' @importFrom xplot plot.highchart
 #' @noRd
 #'
 
 .plotEMD <- function(IMF){
-  # browser()
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
+
+  . <- NULL
   M <- IMF$imf
   offset <- 1.25*ceiling(max(M)-min(M))
   nimf <- ncol(M)
@@ -27,20 +31,22 @@
   MVARS <- colnames(AUX[, -c("t")])
   DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
   DATA <- DATA[,.(X=t,Y=value,ID=variable)]
-  plot.highchart(
+  xplot::plot.highchart(
     color.palette ="ag_Sunset",
     yAxis.label =FALSE,
-    plot.height = max(1000,100*NIMF),
+    plot.height = max(1000,100*nimf),
     plot.type="line",
     legend.layout="horizontal",
     legend.show=TRUE,
     yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
-    yAxis.min=-OFFSET,
+    yAxis.min=-offset,
     data=DATA)
 }
 
 .getEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
+
+  . <- NULL
   if(is.null(dt) & !is.null(t)){
     dt <- t[2]-t[1]
   }
