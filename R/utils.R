@@ -11,21 +11,70 @@
 #' @noRd
 #'
 
-.buildEEMD <- function(s,t,nit=10,nimf=10,n,namp=0.5e-7,ntype="gaussian",complete=FALSE){
+.plotEMD <- function(IMF){
+  # browser()
+  M <- IMF$imf
+  offset <- 1.25*ceiling(max(M)-min(M))
+  nimf <- ncol(M)
+  for(i in 1:nimf){
+    j <- nimf-i+1
+    M[[j]] <- M[[j]]+offset*i
+  }
+  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s,M)
+  IVARS <- c("t")
+  MVARS <- colnames(AUX[, -c("t")])
+  DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+  DATA <- DATA[,.(X=t,Y=value,ID=variable)]
+  plot.highchart(
+    color.palette ="ag_Sunset",
+    yAxis.label =FALSE,
+    plot.height = max(1000,100*NIMF),
+    plot.type="line",
+    legend.layout="horizontal",
+    legend.show=TRUE,
+    yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
+    yAxis.min=-OFFSET,
+    data=DATA)
+}
+
+.getEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  if(!complete){
-    TMP <- tempdir(check = TRUE)
-    hht::EEMD(sig=s, tt=t, noise.amp= namp, noise.type=, trials=nit, nimf=nimf, trials.dir = TMP )
-    IMF <- hht::EEMDCompile(trials=NIT, nimf=NIMF, trials.dir = TMP)
-    unlink(TMP)
-    M <- IMF$averaged.imfs
-  } else {
-    IMF <- hht::CEEMD(sig=s, tt=t, noise.amp=namp, trials=nit, verbose = TRUE, noise.type=ntype)
-    M <- IMF$imf
+  if(is.null(dt) & !is.null(t)){
+    dt <- t[2]-t[1]
   }
 
+  if(is.null(t) & !is.null(dt)){
+    n <- length(s)
+    t <- seq(0,(n-1)*dt,by=dt)
+  }
+
+  stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
+  # browser()
+  if(tolower(model)=="eemd"){
+    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    M <- AUX$imf  |> as.data.table()
+    NC <- ncol(M)
+    RES <- M[[NC]] |> unname()
+    IMF <- M[,-NC,with = FALSE]
+  }
+
+  if(tolower(model)=="ceemd"){
+    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
+    IMF <- AUX$imf |> as.data.table()
+    RES <- AUX$residue |> unname()
+  }
+  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+  # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
+  Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
+  wm <- 2*pi/Tm
+  fm <- 1/Tm
+  PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
+
+
+  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
 
 }
+
 
 .trimI <- function(.SD,COL="s"){
   n <- nrow(.SD)
@@ -38,7 +87,7 @@
 
 }
 
-.taperA <- function(x,Astop=1e-4,Apass=1e-3){
+.taperA <- function(x,Astop=1e-5,Apass=1e-4){
   stopifnot(is.vector(x))
   n <- length(x)
   iH_stop <- which(abs(x) > Astop) |> first()
@@ -64,14 +113,14 @@
 }
 
 
-.taperI <- function(x,Lstop=0.005,Lpass=0.01,Hstop=0.99,Hpass=0.995){
+.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.9995,Lpass=0.995){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
-  iL_stop <- which(cumIA>=Lstop)|> first()#0.005
-  iL_pass <- which(cumIA>=Lpass)|> first()#0.01
+  iL_stop <- which(cumIA>=Lstop)|> first()#0.995
+  iL_pass <- which(cumIA>=Lpass)|> first()#0.99
   LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.01, Apass = 0.99)
-  iH_stop <- which(cumIA>=Hstop)|> first()#0.99
-  iH_pass <- which(cumIA>=Hpass)|> first()#0.995
+  iH_stop <- which(cumIA>=Hstop)|> first()#0.01
+  iH_pass <- which(cumIA>=Hpass)|> first()#0.005
   HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.01, Apass = 0.99)
   return(HP*LP)
 
@@ -277,9 +326,10 @@
   return(D)
 }
 
-.getTm <- function(X,Fs=NULL,fmin = 0.25,fmax = 20.0){
+.getTm <- function(X,Fs=NULL,fmin = 0,fmax = Inf){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if(max(abs(X))==0) {return(0)}
+  # browser()
   NP <- length(X)
   # NFFT <- nextn(NP,factors = 2)
   AW <- 1/NP*fft(X ,inverse = FALSE)

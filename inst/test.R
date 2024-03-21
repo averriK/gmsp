@@ -6,82 +6,40 @@ if(!exists("SET")){
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
 
-RSN.TARGET <- 1540  #577 300 1500 1540
+RSN_TARGET <- 577  #577 300 1500 1540
 ID_TARGET <- "DT"
 OCID_TARGET <- "H1"
 COMPLETE <- FALSE
 
 # -----
-RAW <- SET[[RSN.TARGET]] #577 300 1500
+RAW <- SET[[RSN_TARGET]] #577 300 1500
 RECORD <- buildTS(
-  RAW$AT,
+  x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
   Fmax=20,
-  TrimZeros=FALSE,
-  Detrend=TRUE,
+  TrimZeros=TRUE,
+  DetrendAT=TRUE,
+  DetrendVT=TRUE,
+  DetrendDT=TRUE,
   PadZeros=TRUE,
   TargetUnits="mm",
   NW=1024,
-  OVLP=75,
-  Astop=0.5e-4,
-  Apass=1e-3)
+  OVLP=75)
 TSL <- RECORD$TSL
+TSW <- RECORD$TSW
 dt <- RECORD$dt
 
 
-DATA.TS <- TSL[ID=="AT" & OCID=="H1",.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)
+DATA <- TSL[ID=="AT" & OCID=="H1",.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
 # -----
 s <- DATA$Y
 t <- DATA$X
-NIT <- 10
-NIMF <- 8
-n <- 6# n<0
-NAMP <- 0.5*10^(-n)
-NTYPE <- "gaussian" #c("uniform","gaussian")
-
-if(COMPLETE){
-  IMF <- hht::CEEMD(sig=s, tt=t, noise.amp=NAMP, trials=NIT, verbose = TRUE, noise.type=NTYPE)
-  M <- IMF$imf
-} else {
-  TMP <- tempdir(check = TRUE)
-  hht::EEMD(sig=s, tt=t, noise.amp=NAMP, trials=NIT, nimf=NIMF, trials.dir = TMP )
-  #Compile the results
-  IMF <- hht::EEMDCompile(trials=NIT, nimf=NIMF, trials.dir = TMP)
-  unlink(TMP)
-  M <- IMF$averaged.imfs
-}
-
-OFFSET <- 1.25*ceiling(max(M)-min(M))
-for(i in 1:ncol(M)){
-  j <- ncol(M)-i+1
-  M[,j] <- M[,j]+OFFSET*i
-}
-AUX <- as.data.table(M)
-AUX[,`:=`(t=IMF$tt,"Residue"=IMF$residue,"Signal"=IMF$original.signal+OFFSET*(ncol(M)+2))]
-setnames(AUX,old=colnames(AUX),new=stringr::str_replace(colnames(AUX),pattern = "V","IMF-"))
-
-IVARS <- c("t")
-MVARS <- colnames(AUX[, -c("t")])
-AUX2 <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-DATA.IMF <- AUX2[,.(X=t,Y=value,ID=variable)]
-
-
-
-plot.highchart(
-  color.palette ="ag_Sunset",
-  yAxis.label =FALSE,
-  plot.height = max(1000,100*NIMF),
-  plot.type="line",
-  legend.layout="horizontal",
-  legend.show=TRUE,
-  yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
-  yAxis.min=-OFFSET,
-  data=DATA.IMF)
-
-
+IMF <- .getEMD(t=t,s=s)
+PLOT <- .plotEMD(IMF)
+PLOT
 # ----
 # Remove IMF 5,6,7 y residuos
 

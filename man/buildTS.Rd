@@ -13,13 +13,13 @@ buildTS(
   Resample = TRUE,
   FlatZeros = TRUE,
   TrimZeros = TRUE,
-  Detrend = TRUE,
+  DetrendAT = TRUE,
+  DetrendVT = TRUE,
+  DetrendDT = TRUE,
   PadZeros = TRUE,
   TargetUnits = "mm",
   NW = 2048,
-  OVLP = 75,
-  Astop = 1e-04,
-  Apass = 0.001
+  OVLP = 75
 )
 }
 \arguments{
@@ -39,7 +39,11 @@ buildTS(
 
 \item{TrimZeros}{boolean}
 
-\item{Detrend}{boolean}
+\item{DetrendAT}{boolean}
+
+\item{DetrendVT}{boolean}
+
+\item{DetrendDT}{boolean}
 
 \item{PadZeros}{boolean}
 
@@ -48,10 +52,6 @@ buildTS(
 \item{NW}{integer Windows Length}
 
 \item{OVLP}{integer}
-
-\item{Astop}{numeric}
-
-\item{Apass}{numeric}
 }
 \value{
 data.table

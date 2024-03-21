@@ -9,12 +9,12 @@
 #' @param TrimZeros boolean
 #' @param Modes numeric
 #' @param Resample boolean
-#' @param Detrend boolean
+#' @param DetrendAT boolean
+#' @param DetrendVT boolean
+#' @param DetrendDT boolean
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
-#' @param Astop numeric
-#' @param Apass numeric
 
 #'
 #' @return data.table
@@ -41,13 +41,13 @@ buildTS <- function(
     Resample = TRUE,
     FlatZeros = TRUE,
     TrimZeros = TRUE,
-    Detrend = TRUE,
+    DetrendAT = TRUE,
+    DetrendVT = TRUE,
+    DetrendDT = TRUE,
     PadZeros=TRUE,
     TargetUnits = "mm",
     NW = 2048,
-    OVLP = 75,
-    Astop=1e-4,
-    Apass=1e-3) {
+    OVLP = 75) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
@@ -95,12 +95,12 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
     names(AT) <- OCID
   }
   # names(AT) <- OCID
-  if (Detrend) {
+  if (DetrendAT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     # names(AT) <- OCID
   }
@@ -131,7 +131,7 @@ buildTS <- function(
     names(AT) <- OCID
   }
   # browser()
-  if (Detrend) {
+  if (DetrendAT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     # names(AT) <- OCID
   }
@@ -144,7 +144,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     names(AT) <- OCID
   }
@@ -182,9 +182,8 @@ buildTS <- function(
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(VT) <- OCID
-  if (Detrend) {
+  if (DetrendVT) {
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
-    # names(AT) <- OCID
   }
 
   ## Integrate VT ----
@@ -193,7 +192,9 @@ buildTS <- function(
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(DT) <- OCID
-
+  if (DetrendDT) {
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
 
 
 
@@ -201,7 +202,7 @@ buildTS <- function(
   ## Flat Zeros (A+I)  ----
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
     names(AT) <- OCID
   }
@@ -218,7 +219,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x,Astop = Astop,Apass = Apass)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
     # browser()
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
@@ -228,8 +229,6 @@ buildTS <- function(
     names(VT) <- OCID
     names(DT) <- OCID
   }
-
-
 
   ## Restore Scale ----
   # browser()
@@ -264,7 +263,9 @@ buildTS <- function(
       return(x)
     })]
     names(VT) <- OCID
-
+    if (DetrendVT) {
+      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    }
     COLS <- colnames(AT)
     AT <- VT[, lapply(.SD, function(x) {
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
@@ -273,9 +274,8 @@ buildTS <- function(
     })]
     names(AT) <- OCID
   }
-  if (Detrend) {
+  if (DetrendAT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-
   }
 
   ## Return
