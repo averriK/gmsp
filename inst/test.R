@@ -5,7 +5,7 @@ if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
-RSN_TARGET <- 1540  #577 300 1500 1540
+RSN_TARGET <- 577  #577 300 1500 1540
 
 # -----
 RAW <- SET[[RSN_TARGET]] #577 300 1500
@@ -15,18 +15,17 @@ RECORD <- buildTS(
   UN=RAW$SourceUnits,
   Fmax=25,
   TrimZeros = TRUE,
-  Rebuild_AT = FALSE,
+  Rebuild_AT = TRUE,
   TargetUnits="mm",
-  RemoveFirstIMF_AT = TRUE,
+  RemoveFirstIMF_AT = FALSE,
   RemoveLastIMF_AT = TRUE,
   RemoveFirstIMF_VT = FALSE,
-  RemoveLastIMF_VT = TRUE,
+  RemoveLastIMF_VT = FALSE,
   RemoveFirstIMF_DT = FALSE,
   RemoveLastIMF_DT = TRUE,
-  NW=1024,
+  NW=2048,
   OVLP=75)
 TSL <- RECORD$TSL
-dt <- RECORD$dt
 
 ID_TARGET <- "AT"
 OCID_TARGET <- "UP"
