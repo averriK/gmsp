@@ -1,3 +1,5 @@
+#' @importFrom data.table :=
+#' @importFrom stats na.omit
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
 #' @importFrom seewave stdft
@@ -6,18 +8,129 @@
 #' @importFrom utils tail
 #' @importFrom digest digest
 #' @importFrom spectral spec.fft
+#' @importFrom EMD eemd
+#' @importFrom xplot plot.highchart
 #' @noRd
 #'
 
+.plotEMD <- function(IMF){
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
 
-.taper <- function(x){
+  . <- NULL
+  M <- IMF$imf
+  offset <- 1.25*ceiling(max(M)-min(M))
+  nimf <- ncol(M)
+  for(i in 1:nimf){
+    j <- nimf-i+1
+    M[[j]] <- M[[j]]+offset*i
+  }
+
+
+  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s+offset*(nimf+2),M)
+  IVARS <- c("t")
+  MVARS <- colnames(AUX[, -c("t")])
+  DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
+  DATA <- DATA[,.(X=t,Y=value,ID=variable)]
+  xplot::plot.highchart(
+    color.palette ="ag_Sunset",
+    yAxis.label =FALSE,
+    plot.height = max(1000,100*nimf),
+    plot.type="line",
+    legend.layout="horizontal",
+    legend.show=TRUE,
+    yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
+    yAxis.min=-offset,
+    data=DATA)
+}
+
+.getEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
+
+  . <- NULL
+  if(is.null(dt) & !is.null(t)){
+    dt <- t[2]-t[1]
+  }
+
+  if(is.null(t) & !is.null(dt)){
+    n <- length(s)
+    t <- seq(0,(n-1)*dt,by=dt)
+  }
+
+  stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
+  # browser()
+  if(tolower(model)=="eemd"){
+    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    M <- AUX$imf  |> as.data.table()
+    NC <- ncol(M)
+    RES <- M[[NC]] |> unname()
+    IMF <- M[,-NC,with = FALSE]
+  }
+
+  if(tolower(model)=="ceemd"){
+    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
+    IMF <- AUX$imf |> as.data.table()
+    RES <- AUX$residue |> unname()
+  }
+  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+  # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
+  Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
+  wm <- 2*pi/Tm
+  fm <- 1/Tm
+  PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
+# remove IMF1, IMF(n) and residue
+  # browser()
+  nimf <- ncol(IMF)
+  sR <- IMF[,-c(1,nimf),with = FALSE][,rowSums(.SD)]
+  return(list(s=s,t=t,sR=sR,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
+
+}
+
+
+.trimI <- function(.SD,COL="s"){
+  n <- nrow(.SD)
+  idx <- which(.SD[[COL]]!=0) |> first()
+  START <- max(idx,2)
+  idx <- which(.SD[[COL]]!=0) |> last()
+  END <- min(idx,n-1)
+  return(.SD[(START-1):(END+1)])
+
+
+}
+
+.taperA <- function(x,Astop=1e-5,Apass=1e-4){
+  stopifnot(is.vector(x))
+  n <- length(x)
+  iH_stop <- which(abs(x) > Astop) |> first()
+  iH_stop <- ifelse(is.na(iH_stop), 1, iH_stop)
+
+  iH_pass <- which(abs(x) > Apass) |> first()
+  iH_pass <- ifelse(is.na(iH_pass), 1, iH_pass)
+  iH_pass <- max(iH_pass, iH_stop+1L)
+  stopifnot( iH_pass > iH_stop)
+
+
+  iL_stop <- which(abs(x) > Astop) |> last()
+  iL_stop <- ifelse(is.na(iL_stop), n, iL_stop)
+
+  iL_pass <- which(abs(x) > Apass) |> last()
+  iL_pass <- ifelse(is.na(iL_pass), n, iL_pass)
+  iL_pass <- min(iL_pass, iL_stop-1L)
+  stopifnot( iL_pass < iL_stop)
+
+  HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
+  LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
+  return(LP * HP)
+}
+
+
+.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.9995,Lpass=0.995){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
-  iL_stop <- which(cumIA>=0.995)|> first()
-  iL_pass <- which(cumIA>=0.99)|> first()
+  iL_stop <- which(cumIA>=Lstop)|> first()#0.995
+  iL_pass <- which(cumIA>=Lpass)|> first()#0.99
   LP <- .buildLowPassButtterworth(f=seq(1,n),Fstop = iL_stop, Fpass = iL_pass, Astop=0.01, Apass = 0.99)
-  iH_stop <- which(cumIA>=0.0005)|> first()
-  iH_pass <- which(cumIA>=0.005)|> first()
+  iH_stop <- which(cumIA>=Hstop)|> first()#0.01
+  iH_pass <- which(cumIA>=Hpass)|> first()#0.005
   HP <- .buildHighPassButtterworth(f=seq(1,n),Fpass = iH_pass, Fstop = iH_stop, Astop=0.01, Apass = 0.99)
   return(HP*LP)
 
@@ -223,9 +336,10 @@
   return(D)
 }
 
-.getTm <- function(X,Fs=NULL,fmin = 0.25,fmax = 20.0){
+.getTm <- function(X,Fs=NULL,fmin = 0,fmax = Inf){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if(max(abs(X))==0) {return(0)}
+  # browser()
   NP <- length(X)
   # NFFT <- nextn(NP,factors = 2)
   AW <- 1/NP*fft(X ,inverse = FALSE)

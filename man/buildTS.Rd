@@ -2,72 +2,60 @@
 % Please edit documentation in R/buildTS.R
 \name{buildTS}
 \alias{buildTS}
-\title{Title}
+\title{buildTS}
 \usage{
 buildTS(
-  a,
+  x,
   dt,
-  UN = NULL,
-  hl = 500,
-  DownFs = 0,
-  UpFs = 0,
-  FlatZerosAT = TRUE,
-  DerivateDT = FALSE,
-  DerivateVT = FALSE,
+  UN,
+  Modes = NULL,
+  Fmax = 25,
+  Resample = TRUE,
+  FlatZeros = TRUE,
+  TrimZeros = TRUE,
   DetrendAT = TRUE,
-  DetrendVT = FALSE,
-  DetrendDT = FALSE,
-  Fpass_LP = 0,
-  Fstop_LP = 0,
-  Fpass_HP = 0,
-  Fstop_HP = 0,
+  DetrendVT = TRUE,
+  DetrendDT = TRUE,
+  PadZeros = TRUE,
   TargetUnits = "mm",
   NW = 2048,
   OVLP = 75
 )
 }
 \arguments{
-\item{a}{data.table Time Series}
+\item{x}{data.table}
 
-\item{dt}{numeric Time Step}
+\item{dt}{numeric}
 
-\item{UN}{character Units}
+\item{UN}{character}
 
-\item{hl}{numeric 1/Tolerance}
+\item{Modes}{numeric}
 
-\item{DownFs}{integer Downsample Frequency}
+\item{Fmax}{integer}
 
-\item{UpFs}{integer Upsample Frequency}
+\item{Resample}{boolean}
 
-\item{FlatZerosAT}{boolean Flat Zeros Acceleration Time Series}
+\item{FlatZeros}{boolean}
 
-\item{DerivateDT}{boolean Derivate Displacements Time Series}
+\item{TrimZeros}{boolean}
 
-\item{DerivateVT}{boolean Derivate Velocity Time Series}
+\item{DetrendAT}{boolean}
 
-\item{DetrendAT}{boolean Detrend Acceleration Time Series}
+\item{DetrendVT}{boolean}
 
-\item{DetrendVT}{boolean Detrend Velocity Time Series}
+\item{DetrendDT}{boolean}
 
-\item{DetrendDT}{boolean Detrend Displacement Time Series}
-
-\item{Fpass_LP}{numeric Low Pass Frequency}
-
-\item{Fstop_LP}{numeric Low Stop Frequency}
-
-\item{Fpass_HP}{numeric High Pass Frequency}
-
-\item{Fstop_HP}{numeric High Stop Frequency}
+\item{PadZeros}{boolean}
 
 \item{TargetUnits}{character Units}
 
 \item{NW}{integer Windows Length}
 
-\item{OVLP}{integer Overlap}
+\item{OVLP}{integer}
 }
 \value{
 data.table
 }
 \description{
-Title
+buildTS
 }
