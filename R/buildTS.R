@@ -7,11 +7,14 @@
 #' @param FlatZeros boolean
 #' @param PadZeros boolean
 #' @param TrimZeros boolean
-#' @param Modes numeric
 #' @param Resample boolean
 #' @param DetrendAT boolean
 #' @param DetrendVT boolean
 #' @param DetrendDT boolean
+#' @param RebuildAT boolean
+#' @param RemoveFirstIMF boolean
+#' @param RemoveLastIMF boolean
+#' @param taper integer
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
@@ -45,10 +48,12 @@ buildTS <- function(
     DetrendVT = TRUE,
     DetrendDT = TRUE,
     PadZeros=TRUE,
-    RemoveIMF1 = TRUE,
-    RemoveIMFn = TRUE,
+    RemoveFirstIMF = FALSE,
+    RemoveLastIMF = FALSE,
     RebuildAT = FALSE,
+    taper=2,
     TargetUnits = "mm",
+    taper=0L,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
     NW = 2048,
     OVLP = 75) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
@@ -57,6 +62,11 @@ buildTS <- function(
 
   OK <- is.data.table(x) && !is.null(dt) && !is.null(UN)
   stopifnot(OK)
+
+  if(taper==0) .taper <- function(x){x}
+  if(taper==1) .taper <- function(x){.taperA(x)}
+  if(taper==2) .taper <- function(x){.taperI(x)}
+  if(taper==3) .taper <- function(x){.taperA(x)*.taperI(x)}
 
   ATo <- copy(x)
   ## Check Record ----
@@ -98,7 +108,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
     names(AT) <- OCID
   }
@@ -147,7 +157,7 @@ buildTS <- function(
   if (FlatZeros == TRUE) {
     # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     names(AT) <- OCID
   }
@@ -179,11 +189,8 @@ buildTS <- function(
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
 
-  ## Build EEMD
-  # AT <- AT[, lapply(.SD, function(x) {
-  #   x <- .eemdfilter(x)
-  #   x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-  # })]
+
+
   ## Integrate AT ----
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
@@ -202,6 +209,75 @@ buildTS <- function(
   names(DT) <- OCID
   if (DetrendDT) {
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
+
+
+  ## Flat Zeros (A+I)  ----
+  if (FlatZeros == TRUE) {
+    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
+    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
+    names(AT) <- OCID
+  }
+
+
+  ## Homogenize rows ----
+  # browser()
+  NMX <- min(nrow(AT), nrow(VT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
+
+  ## Flat Zeros (A+I)  ----
+  if (FlatZeros == TRUE) {
+    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
+    # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
+    # browser()
+    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+    names(AT) <- OCID
+    names(VT) <- OCID
+    names(DT) <- OCID
+  }
+
+
+
+
+
+
+  ## Pack Time Series  ----
+  NP <-  nrow(AT)
+  ts <- seq(0,dt*(NP-1),dt)
+  AUX <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
+  ivars <- c("ts")
+  mvars <- colnames(AUX[, -c("ts")])
+  AUX <- data.table::melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
+  TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
+  ## Trim Records,  ----
+  if(TrimZeros){
+    #Warning: Different time scales from now on
+    TSL <- TSL[,.trimZeros(.SD),by=c("OCID","ID")]}
+  ATL <- TSL[ID=="AT"]
+  VTL <- TSL[ID=="VT"]
+  DTL <- TSL[ID=="DT"]
+
+
+
+
+  ## Build EEMD ----
+  browser()
+  # DTL <- TSL[ID=="DT"]
+  if(RemoveFirstIMF || RemoveLastIMF){
+    TSL <- TSL[,lapply(.SD,function(x){
+      AUX <- .buildIMF(t=t,s=s)
+      nimf <- AUX$nimf
+      xcols <- c(ifelse(RemoveFirstIMF,1,0),ifelse(RemoveLastIMF,nimf,0))
+      imf <-  AUX$imf[,-xcols,with = FALSE]
+      s <- rowSums(imf)
+    }),by=.(OCID)]
   }
 
   ## Rebuild AT   ----
@@ -231,36 +307,6 @@ buildTS <- function(
 
 
 
-  ## Flat Zeros (A+I)  ----
-  if (FlatZeros == TRUE) {
-    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
-    names(AT) <- OCID
-  }
-
-
-  ## Homogenize rows ----
-  # browser()
-  NMX <- min(nrow(AT), nrow(VT), nrow(DT))
-  AT <- AT[-((NMX):.N)]
-  VT <- VT[-((NMX):.N)]
-  DT <- DT[-((NMX):.N)]
-
-  ## Flat Zeros (A+I)  ----
-  if (FlatZeros == TRUE) {
-    # WoA <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
-    # WoI <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)*.taperA(x)}))]
-    # browser()
-    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-
-    names(AT) <- OCID
-    names(VT) <- OCID
-    names(DT) <- OCID
-  }
 
   ## Restore Scale ----
   # browser()
@@ -270,20 +316,6 @@ buildTS <- function(
   names(AT) <- OCID
   names(VT) <- OCID
   names(DT) <- OCID
-
-  ## Pack Time Series - Wide Format ----
-  NP <-  nrow(AT)
-  ts <- seq(0,dt*(NP-1),dt)
-  TSW <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
-  ## Pack Time Series - Long Format ----
-
-  IVARS <- c("ts")
-  MVARS <- colnames(TSW[, -c("ts")])
-  AUX <- data.table::melt(TSW, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-  TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
-  ## Trim Records, keep time series ----
-  if(TrimZeros){
-  TSL <- TSL[,.trimI(.SD),by=c("OCID","ID")]}
 
 
   ## Return ----

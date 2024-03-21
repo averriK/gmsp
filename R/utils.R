@@ -43,8 +43,9 @@
     data=DATA)
 }
 
-.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
+.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
+
 
   . <- NULL
   if(is.null(dt) & !is.null(t)){
@@ -57,9 +58,14 @@
   }
 
   stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
+  # Trim Zeros
+  browser()
+  DT <- data.table(t=t,s=s)
+  DT <- .trimZeros(DT)
+
   # browser()
   if(tolower(model)=="eemd"){
-    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
     M <- AUX$imf  |> as.data.table()
     NC <- ncol(M)
     RES <- M[[NC]] |> unname()
@@ -67,9 +73,10 @@
   }
 
   if(tolower(model)=="ceemd"){
-    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
+    AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
     IMF <- AUX$imf |> as.data.table()
     RES <- AUX$residue |> unname()
+    M <- data.table(IMF,RES)
   }
   names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
   # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
@@ -77,71 +84,33 @@
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-  offset <- 1.25*ceiling(max(M)-min(M))
-  nimf <- ncol(M)
-  for(i in 1:nimf){
-    j <- nimf-i+1
-    M[[j]] <- M[[j]]+offset*i
+
+  DATA <- NULL
+  if(plot==TRUE){
+    offset <- 1.25*ceiling(max(M)-min(M))
+
+    nm <- ncol(M)
+    for(i in 1:nm){
+      j <- nm-i+1
+      M[[j]] <- M[[j]]+offset*i
+    }
+
+    AUX <- data.table(t=t,"Residue"=RES,"Signal"=s+offset*(nm+2),M)
+    ivars <- c("t")
+    mvars <- colnames(AUX[, -c("t")])
+    DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
+    DATA <- DATA[,.(X=t,Y=value,ID=variable)]
   }
+  # Restore Zeros
+  to <- DT$t[1]
+  tc <- last(DT$t)
 
-
-  AUX <- data.table(t=t,"Residue"=RES,"Signal"=s+offset*(nimf+2),M)
-  ivars <- c("t")
-  mvars <- colnames(AUX[, -c("t")])
-  DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
-  DATA <- DATA[,.(X=t,Y=value,ID=variable)]
-
-  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES,plot.data=DATA,plot.offset=offset))
-}
-
-
-.filterEEMD <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5"){
-  on.exit(expr = {rm(list = ls())}, add = TRUE)
-
-  . <- NULL
-  if(is.null(dt) & !is.null(t)){
-    dt <- t[2]-t[1]
-  }
-
-  if(is.null(t) & !is.null(dt)){
-    n <- length(s)
-    t <- seq(0,(n-1)*dt,by=dt)
-  }
-
-  stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
-  # browser()
-  if(tolower(model)=="eemd"){
-    AUX <- EMD::emd(xt=s, tt=t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
-    M <- AUX$imf  |> as.data.table()
-    NC <- ncol(M)
-    RES <- M[[NC]] |> unname()
-    IMF <- M[,-NC,with = FALSE]
-  }
-
-  if(tolower(model)=="ceemd"){
-    AUX <- hht::CEEMD(sig=s, tt=t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
-    IMF <- AUX$imf |> as.data.table()
-    RES <- AUX$residue |> unname()
-  }
-  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
-  # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
-  Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
-  wm <- 2*pi/Tm
-  fm <- 1/Tm
-  PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-  # remove IMF1, IMF(n) and residue
-  # browser()
-  nimf <- ncol(IMF)
-  sR <- IMF[,-c(1,nimf),with = FALSE][,rowSums(.SD)]
-  return(list(s=s,t=t,sR=sR,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
-
+  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=ncol(IMF),residue=RES,plot.data=DATA,plot.offset=offset))
 }
 
 
 
-
-
-.trimI <- function(.SD,COL="s"){
+.trimZeros <- function(.SD,COL="s"){
   n <- nrow(.SD)
   idx <- which(.SD[[COL]]!=0) |> first()
   START <- max(idx,2)

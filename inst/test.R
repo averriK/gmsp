@@ -7,7 +7,7 @@ if(!exists("SET")){
 }
 
 RSN_TARGET <- 577  #577 300 1500 1540
-ID_TARGET <- "AT"
+ID_TARGET <- "DT"
 OCID_TARGET <- "H1"
 COMPLETE <- FALSE
 
@@ -24,6 +24,8 @@ RECORD <- buildTS(
   DetrendDT=TRUE,
   PadZeros=TRUE,
   TargetUnits="mm",
+  RemoveFirstIMF = TRUE,
+  RemoveLastIMF = TRUE,
   NW=1024,
   OVLP=75)
 TSL <- RECORD$TSL
@@ -31,7 +33,9 @@ TSW <- RECORD$TSW
 dt <- RECORD$dt
 
 
-DT.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+# DT.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+AUX <- TSW$AT.H1
+DT.TS <- AUX[,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
 plot.ggplot2(DT.TS, plot.type = "line",line.size=0.5)
 s <- DT.TS$Y
 t <- DT.TS$X

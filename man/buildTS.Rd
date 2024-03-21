@@ -8,7 +8,6 @@ buildTS(
   x,
   dt,
   UN,
-  Modes = NULL,
   Fmax = 25,
   Resample = TRUE,
   FlatZeros = TRUE,
@@ -17,6 +16,9 @@ buildTS(
   DetrendVT = TRUE,
   DetrendDT = TRUE,
   PadZeros = TRUE,
+  RemoveFirstIMF = FALSE,
+  RemoveLastIMF = FALSE,
+  RebuildAT = FALSE,
   TargetUnits = "mm",
   NW = 2048,
   OVLP = 75
@@ -28,8 +30,6 @@ buildTS(
 \item{dt}{numeric}
 
 \item{UN}{character}
-
-\item{Modes}{numeric}
 
 \item{Fmax}{integer}
 
@@ -46,6 +46,12 @@ buildTS(
 \item{DetrendDT}{boolean}
 
 \item{PadZeros}{boolean}
+
+\item{RemoveFirstIMF}{boolean}
+
+\item{RemoveLastIMF}{boolean}
+
+\item{RebuildAT}{boolean}
 
 \item{TargetUnits}{character Units}
 
