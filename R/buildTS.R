@@ -180,8 +180,8 @@ buildTS <- function(
   # ts <- seq(0,dt*(NP-1),dt)
   if(RemoveFirstIMF_AT || RemoveLastIMF_AT){
     AT <- AT[,lapply(.SD,function(x){
-      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- .buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
 
       nimf <- AUX$nimf
       xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
@@ -224,8 +224,8 @@ buildTS <- function(
   ## VT EEMD ----
   if(RemoveFirstIMF_VT || RemoveLastIMF_VT){
     VT <- VT[,lapply(.SD,function(x){
-      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- .buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
 
       nimf <- AUX$nimf
       xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
@@ -249,8 +249,8 @@ buildTS <- function(
 
   if(RemoveFirstIMF_DT || RemoveLastIMF_DT){
     DT <- DT[,lapply(.SD,function(x){
-      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- .buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
 
       nimf <- AUX$nimf
       xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
