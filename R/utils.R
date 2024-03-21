@@ -43,7 +43,7 @@
     data=DATA)
 }
 
-.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,cv.kfold=3,stop.rule="type5",plot=TRUE){
+.buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
 
@@ -59,8 +59,9 @@
 
   stopifnot(dt == t[2]-t[1] & length(s)==length(t) )
   # Trim Zeros
-  browser()
+
   DT <- data.table(t=t,s=s)
+  n <- nrow(DT)
   DT <- .trimZeros(DT)
 
   # browser()
@@ -79,6 +80,7 @@
     M <- data.table(IMF,RES)
   }
   names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+
   # Tm <- sapply(IMF, function(x) {.getTm(x,Fs=1/dt)})
   Tm <- IMF[,lapply(.SD, function(x) {.getTm(x,Fs=1/dt)})]
   wm <- 2*pi/Tm
@@ -95,28 +97,35 @@
       M[[j]] <- M[[j]]+offset*i
     }
 
-    AUX <- data.table(t=t,"Residue"=RES,"Signal"=s+offset*(nm+2),M)
+    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nm+2),M)
     ivars <- c("t")
     mvars <- colnames(AUX[, -c("t")])
     DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
     DATA <- DATA[,.(X=t,Y=value,ID=variable)]
   }
-  # Restore Zeros
-  to <- DT$t[1]
-  tc <- last(DT$t)
+# Restore zeros
+  nimf <- ncol(IMF)
+  i <- as.integer(DT$t[1]/dt)
+  j <- as.integer(last(DT$t)/dt)
 
-  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=ncol(IMF),residue=RES,plot.data=DATA,plot.offset=offset))
+  RES=c(rep(0,times=i-1),RES,rep(0,times=n-j))
+  # browser()
+  stopifnot(length(RES)==length(t))
+  Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
+  Oj <- data.table(matrix(0, nrow = i-1, ncol = ncol(IMF)))
+  IMF <- rbindlist(list(Oj,IMF,Oi),use.names = FALSE)
+  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=nimf,residue=RES,plot.data=DATA,plot.offset=offset))
 }
 
 
 
-.trimZeros <- function(.SD,COL="s"){
+.trimZeros <- function(.SD,COL="s",offset=0){
   n <- nrow(.SD)
   idx <- which(.SD[[COL]]!=0) |> first()
-  START <- max(idx,2)
+  START <- max(idx,2+offset)
   idx <- which(.SD[[COL]]!=0) |> last()
-  END <- min(idx,n-1)
-  return(.SD[(START-1):(END+1)])
+  END <- min(idx,n-offset)
+  return(.SD[(START-offset):(END+offset)])
 
 
 }

@@ -18,11 +18,7 @@ RECORD <- buildTS(
   dt=RAW$dt,
   UN=RAW$SourceUnits,
   Fmax=20,
-  TrimZeros=TRUE,
-  DetrendAT=TRUE,
-  DetrendVT=TRUE,
-  DetrendDT=TRUE,
-  PadZeros=TRUE,
+  RebuildAT = TRUE,
   TargetUnits="mm",
   RemoveFirstIMF = TRUE,
   RemoveLastIMF = TRUE,
@@ -34,8 +30,7 @@ dt <- RECORD$dt
 
 
 # DT.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-AUX <- TSW$AT.H1
-DT.TS <- AUX[,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+DT.TS <- TSW[,.(X=ts,Y=AT.H1,ID="AT.H1")]
 plot.ggplot2(DT.TS, plot.type = "line",line.size=0.5)
 s <- DT.TS$Y
 t <- DT.TS$X
