@@ -17,6 +17,7 @@
 #' @export buildIMF
 #'
 #' @examples
+#'
 buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 

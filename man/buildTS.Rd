@@ -75,7 +75,7 @@ buildTS(
 \item{OVLP}{integer}
 }
 \value{
-data.table
+list
 }
 \description{
 buildTS

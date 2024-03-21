@@ -24,7 +24,7 @@
 #' @param OVLP integer
 
 #'
-#' @return data.table
+#' @return list
 #' @export buildTS
 #'
 #' @examples
