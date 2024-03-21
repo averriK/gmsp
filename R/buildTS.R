@@ -8,10 +8,10 @@
 #' @param PadZeros boolean
 #' @param TrimZeros boolean
 #' @param Resample boolean
-#' @param DetrendAT boolean
-#' @param DetrendVT boolean
-#' @param DetrendDT boolean
-#' @param RebuildAT boolean
+#' @param Detrend_AT boolean
+#' @param Detrend_VT boolean
+#' @param Detrend_DT boolean
+#' @param Rebuild_AT boolean
 #' @param RemoveFirstIMF boolean
 #' @param RemoveLastIMF boolean
 #' @param taper integer
@@ -44,13 +44,17 @@ buildTS <- function(
     Resample = TRUE,
     FlatZeros = TRUE,
     TrimZeros = TRUE,
-    DetrendAT = TRUE,
-    DetrendVT = TRUE,
-    DetrendDT = TRUE,
+    Detrend_AT = TRUE,
+    Detrend_VT = FALSE,
+    Detrend_DT = FALSE,
     PadZeros=TRUE,
-    RemoveFirstIMF = TRUE,
-    RemoveLastIMF = TRUE,
-    RebuildAT = FALSE,
+    RemoveFirstIMF_AT = FALSE,
+    RemoveLastIMF_AT = TRUE,
+    RemoveFirstIMF_VT = FALSE,
+    RemoveLastIMF_VT = TRUE,
+    RemoveFirstIMF_DT = FALSE,
+    RemoveLastIMF_DT = TRUE,
+    Rebuild_AT = FALSE,
     TargetUnits = "mm",
     taper=2,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
     NW = 2048,
@@ -106,7 +110,7 @@ buildTS <- function(
 
 
   ## Flat Zeros (A+I)  ----
-  if (DetrendAT) {
+  if (Detrend_AT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   if (FlatZeros == TRUE) {
@@ -119,23 +123,28 @@ buildTS <- function(
 
 
 
-  ## Build EEMD. Remove low modes. Highpass Filter ----
+  ## Build EEMD ----
   NP <-  nrow(AT)
   ts <- seq(0,dt*(NP-1),dt)
-  AT <- AT[,lapply(.SD,function(x){
-    # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
-    AUX <- .buildIMF(t=ts,s=x,model="eemd",boundary="wave",stop.rule="type5")
+  if(RemoveFirstIMF_AT || RemoveLastIMF_AT){
+    AT <- AT[,lapply(.SD,function(x){
+      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- .buildIMF(t=ts,s=x,model="eemd",boundary="wave",stop.rule="type5")
 
-    nimf <- AUX$nimf
-    xcols <- c(ifelse(RemoveFirstIMF,1,0),ifelse(RemoveLastIMF,nimf,0))
-    imf <-  AUX$imf[,-xcols,with = FALSE]
-    return(rowSums(imf))
-  })]
+      nimf <- AUX$nimf
+      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
+      imf <-  AUX$imf[,-xcols,with = FALSE]
+      return(rowSums(imf))
+    })]
+  }
+  ## Detrend AT ----
+  if (Detrend_AT) {
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
 
   ## Resample ----
   if(Resample){
-    TargetFsNYQ <- as.integer(4*Fmax) # 80/100 Hz
-    TargetFs <- 2*TargetFsNYQ # 160/200 Hz
+    TargetFs <- as.integer(4*Fmax) # 160/200 Hz
     Fpass_LP <- Fmax # 20/25 Hz
     Fstop_LP <- 1.2*Fmax # 25/30 Hz
 
@@ -156,7 +165,7 @@ buildTS <- function(
     names(AT) <- OCID
   }
   # browser()
-  if (DetrendAT) {
+  if (Detrend_AT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     # names(AT) <- OCID
   }
@@ -166,16 +175,12 @@ buildTS <- function(
   NP <- nrow(AT)
 
   ## Flat Zeros (A+I)  ----
-  if (DetrendAT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
+
   if (FlatZeros == TRUE) {
     Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     names(AT) <- OCID
   }
-
-
 
 
   ## Padding Zeros ----
@@ -207,49 +212,103 @@ buildTS <- function(
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(VT) <- OCID
-  if (DetrendVT) {
+
+  ## Build EEMD ----
+  if(RemoveFirstIMF_VT || RemoveLastIMF_VT){
+    VT <- VT[,lapply(.SD,function(x){
+      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- .buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+
+      nimf <- AUX$nimf
+      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
+      imf <-  AUX$imf[,-xcols,with = FALSE]
+      return(rowSums(imf))
+    })]
+  }
+  ## Detrend VT ----
+  if (Detrend_VT) {
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
-
   ## Integrate VT ----
   DT <- VT[, lapply(.SD, function(x) {
     x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
     x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(DT) <- OCID
-  if (DetrendDT) {
+
+
+  ## Build EEMD ----
+
+  if(RemoveFirstIMF_DT || RemoveLastIMF_DT){
+    DT <- DT[,lapply(.SD,function(x){
+      # AUX <- .buildIMF(t=ts,s=x,model="ceemd",trials=2)
+      AUX <- .buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+
+      nimf <- AUX$nimf
+      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
+      imf <-  AUX$imf[,-xcols,with = FALSE]
+      return(rowSums(imf))
+    })]
+
+  }
+  ## Detrend DT ----
+  if (Detrend_DT) {
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
 
 
 
 
-  if (FlatZeros == TRUE) {
-    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
-    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
+
+
+
+
+
+
+  ## Padding Zeros ----
+  if(PadZeros){
+    NP <- nrow(AT)
+    NZ <- .getNZ(NP)
+    if (NZ > 0) {
+      O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
+    } else {
+      O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
+    }
+    AT <- rbindlist(list(O, AT))
+
+  }
+  ## Rebuild AT   ----
+  if(Rebuild_AT){
+
+
+    VT <- DT[, lapply(.SD, function(x){
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
+    })]
+
+    browser()
+
+
+    if (Detrend_VT) {
+      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    }
+    names(VT) <- OCID
+    AT <- VT[, lapply(.SD, function(x){
+      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
+    })]
+    browser()
+
+  }
+  if (Detrend_AT) {
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   names(AT) <- OCID
 
-  if (DetrendAT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
-  # browser()
-  # # Restore Zeros
-  # browser()
-  # i <- (DT$t[1])/dt |> as.integer()
-  # j <- last(DT$t)/dt |> as.integer()
-  # n <- length(s)
 
 
-  ## Flat Zeros (A+I)  ----
-  if (DetrendAT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
-  if (FlatZeros == TRUE) {
-    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
-    AT <- AT[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
-    names(AT) <- OCID
-  }
 
 
   ## Homogenize rows ----
@@ -273,9 +332,14 @@ buildTS <- function(
   }
 
 
-
-
-
+  ## Restore Scale ----
+  # browser()
+  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
+  names(AT) <- OCID
+  names(VT) <- OCID
+  names(DT) <- OCID
 
   ## Pack Time Series  ----
   NP <-  nrow(AT)
@@ -290,65 +354,10 @@ buildTS <- function(
     #Warning: Different time scales from now on
     TSL <- TSL[,.trimZeros(.SD),by=c("OCID","ID")]}
 
-
-
-
-
-  ## Padding Zeros ----
-  if(PadZeros){
-    NP <- nrow(AT)
-    NZ <- .getNZ(NP)
-    if (NZ > 0) {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
-    } else {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
-    }
-    AT <- rbindlist(list(O, AT))
-
-  }
-  ## Rebuild AT   ----
-  if(RebuildAT){
-    DT <- TSL[ID=="DT"]
-    VT <- DT[,  {
-      browser()
-      x <- NW * .ffilter(s, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      return(x)
-    },by=.(ID,OCID)]
-
-    names(VT) <- OCID
-    if (DetrendVT) {
-      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
-    }
-    COLS <- colnames(AT)
-    AT <- VT[, lapply(.SD, function(x) {
-      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      return(x)
-    })]
-    names(AT) <- OCID
-  }
-  if (DetrendAT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
-
-
-
-
-  ## Restore Scale ----
-  # browser()
-  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * PGAo[i]})]
-  names(AT) <- OCID
-  names(VT) <- OCID
-  names(DT) <- OCID
-
-
   ## Return ----
   Fs <- 1 / dt
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  return(list(TSW = TSW, TSL=TSL,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
+  return(list(TSL=TSL,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
 }

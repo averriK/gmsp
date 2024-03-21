@@ -16,10 +16,11 @@ buildTS(
   DetrendVT = TRUE,
   DetrendDT = TRUE,
   PadZeros = TRUE,
-  RemoveFirstIMF = FALSE,
-  RemoveLastIMF = FALSE,
+  RemoveFirstIMF = TRUE,
+  RemoveLastIMF = TRUE,
   RebuildAT = FALSE,
   TargetUnits = "mm",
+  taper = 2,
   NW = 2048,
   OVLP = 75
 )
@@ -54,6 +55,8 @@ buildTS(
 \item{RebuildAT}{boolean}
 
 \item{TargetUnits}{character Units}
+
+\item{taper}{integer}
 
 \item{NW}{integer Windows Length}
 

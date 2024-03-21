@@ -5,11 +5,7 @@ if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
-
-RSN_TARGET <- 577  #577 300 1500 1540
-ID_TARGET <- "DT"
-OCID_TARGET <- "H1"
-COMPLETE <- FALSE
+RSN_TARGET <- 1540  #577 300 1500 1540
 
 # -----
 RAW <- SET[[RSN_TARGET]] #577 300 1500
@@ -17,21 +13,36 @@ RECORD <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  Fmax=20,
-  RebuildAT = TRUE,
+  Fmax=25,
+  TrimZeros = TRUE,
+  Rebuild_AT = FALSE,
   TargetUnits="mm",
-  RemoveFirstIMF = TRUE,
-  RemoveLastIMF = TRUE,
+  RemoveFirstIMF_AT = TRUE,
+  RemoveLastIMF_AT = TRUE,
+  RemoveFirstIMF_VT = FALSE,
+  RemoveLastIMF_VT = TRUE,
+  RemoveFirstIMF_DT = FALSE,
+  RemoveLastIMF_DT = TRUE,
   NW=1024,
   OVLP=75)
 TSL <- RECORD$TSL
-TSW <- RECORD$TSW
 dt <- RECORD$dt
 
+ID_TARGET <- "AT"
+OCID_TARGET <- "UP"
+DATA.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)
 
-# DT.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-DT.TS <- TSW[,.(X=ts,Y=AT.H1,ID="AT.H1")]
-plot.ggplot2(DT.TS, plot.type = "line",line.size=0.5)
+xplot::plot.highchart(
+  color.palette ="Blue-Red",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
+  data=DATA.TS)
+
+
 s <- DT.TS$Y
 t <- DT.TS$X
 # -----
@@ -40,7 +51,7 @@ AUX <- .buildIMF(t=t,s=s)
 IMF <- AUX$imf
 nimf <- ncol(IMF)
 sR <- IMF[,-c(1),with = FALSE][,rowSums(.SD)]
-DATA <- rbindlist(list(DT.TS,data.table(X=t,Y=sR,ID="Filtered")))
+DATA <- rbindlist(list(DATA.TS,data.table(X=t,Y=sR,ID="Filtered")))
 xplot::plot.highchart(
   color.palette ="Blue-Red",
   yAxis.label =TRUE,

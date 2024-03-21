@@ -1,4 +1,3 @@
-#' @importFrom data.table :=
 #' @importFrom stats na.omit
 #' @importFrom data.table data.table
 #' @importFrom data.table is.data.table
@@ -8,7 +7,8 @@
 #' @importFrom utils tail
 #' @importFrom digest digest
 #' @importFrom spectral spec.fft
-#' @importFrom EMD eemd
+#' @importFrom EMD emd
+#' @importFrom hht CEEMD
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
@@ -108,9 +108,11 @@
   i <- as.integer(DT$t[1]/dt)
   j <- as.integer(last(DT$t)/dt)
 
-  RES=c(rep(0,times=i-1),RES,rep(0,times=n-j))
+  RES=c(rep(0,times=i-1),RES)
   # browser()
-  stopifnot(length(RES)==length(t))
+
+  RES <- c(RES,rep(0,times=n-length(RES)))
+
   Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
   Oj <- data.table(matrix(0, nrow = i-1, ncol = ncol(IMF)))
   IMF <- rbindlist(list(Oj,IMF,Oi),use.names = FALSE)
