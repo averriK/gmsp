@@ -7,7 +7,7 @@ if(!exists("SET")){
 }
 
 RSN_TARGET <- 577  #577 300 1500 1540
-ID_TARGET <- "DT"
+ID_TARGET <- "AT"
 OCID_TARGET <- "H1"
 COMPLETE <- FALSE
 
@@ -31,24 +31,20 @@ TSW <- RECORD$TSW
 dt <- RECORD$dt
 
 
-DATA <- TSL[ID=="AT" & OCID=="H1",.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+DATA <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
 plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
 
 # -----
 s <- DATA$Y
 t <- DATA$X
 IMF <- .getEMD(t=t,s=s)
+DATA <- data.table(X=IMF$t,Y=IMF$sR,ID="Filtered")
+plot.ggplot2(DATA, plot.type = "line",line.size=0.5)
+
+
 PLOT <- .plotEMD(IMF)
 PLOT
 # ----
-# Remove IMF 5,6,7 y residuos
-
-# AUX <- data.table(X=IMF$tt,M)
-# DATA[,.(t=IMF$tt,"Signal"=IMF$original.signal)]
-imf_target <- c(1,2,3,4)
-COLS <- paste0("V",imf_target)
-DATA.IMF.R <- DT.IMF[,.(X,Y=rowSums(.SD),ID=paste0(ID_TARGET,".R")),.SDcols=COLS]
-plot.ggplot2(DATA.IMF.R, plot.type = "line",line.size=0.5)
 
 
 # ------

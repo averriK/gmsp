@@ -20,7 +20,9 @@
     j <- nimf-i+1
     M[[j]] <- M[[j]]+offset*i
   }
-  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s,M)
+
+
+  AUX <- data.table(t=IMF$t,"Residue"=IMF$residue,"Signal"=IMF$s+offset*(nimf+2),M)
   IVARS <- c("t")
   MVARS <- colnames(AUX[, -c("t")])
   DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
@@ -69,9 +71,11 @@
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-
-
-  return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
+# remove IMF1, IMF(n) and residue
+  # browser()
+  nimf <- ncol(IMF)
+  sR <- IMF[,-c(1,nimf),with = FALSE][,rowSums(.SD)]
+  return(list(s=s,t=t,sR=sR,fm=fm,Tm=Tm,pga=PGA,imf=IMF,residue=RES))
 
 }
 
