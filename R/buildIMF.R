@@ -72,7 +72,7 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
       M[[j]] <- M[[j]]+offset*i
     }
 
-    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nm+2),M)
+    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nimf+2),M)
     ivars <- c("t")
     mvars <- colnames(AUX[, -c("t")])
     DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
