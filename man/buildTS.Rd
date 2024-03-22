@@ -16,7 +16,7 @@ buildTS(
   Detrend_VT = FALSE,
   Detrend_DT = FALSE,
   PadZeros = TRUE,
-  Denoise = FALSE,
+  EMD.method = "emd",
   RemoveFirstIMF_AT = 0,
   RemoveLastIMF_AT = 0,
   RemoveFirstIMF_VT = 0,
@@ -53,7 +53,7 @@ buildTS(
 
 \item{PadZeros}{boolean}
 
-\item{Denoise}{boolean}
+\item{EMD.method}{string}
 
 \item{RemoveFirstIMF_AT}{boolean}
 

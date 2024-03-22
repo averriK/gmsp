@@ -12,7 +12,7 @@
 #' @param Detrend_VT boolean
 #' @param Detrend_DT boolean
 #' @param Rebuild_AT boolean
-#' @param Denoise boolean
+#' @param EMD.method string
 #' @param RemoveFirstIMF_AT boolean
 #' @param RemoveLastIMF_AT boolean
 #' @param RemoveFirstIMF_VT boolean
@@ -53,7 +53,7 @@ buildTS <- function(
     Detrend_VT = FALSE,
     Detrend_DT = FALSE,
     PadZeros=TRUE,
-    Denoise = FALSE,
+    EMD.method ="emd",
     RemoveFirstIMF_AT = 0,
     RemoveLastIMF_AT = 0,
     RemoveFirstIMF_VT = 0,
@@ -181,8 +181,7 @@ buildTS <- function(
   # NP <-  nrow(AT)
   # ts <- seq(0,dt*(NP-1),dt)
   AT <- AT[,lapply(.SD,function(x){
-    # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-    AUX <- buildIMF(dt=dt,s=x,eemd.lib="eemd",boundary="wave",stop.rule="type5")
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
     nimf <- AUX$nimf
     i <- RemoveFirstIMF_AT
     j <- RemoveLastIMF_AT
@@ -225,7 +224,7 @@ buildTS <- function(
   ## VT EEMD ----
   VT <- VT[,lapply(.SD,function(x){
     # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-    AUX <- buildIMF(dt=dt,s=x,eemd.lib="eemd",boundary="wave",stop.rule="type5")
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
 
     nimf <- AUX$nimf
     i <- RemoveFirstIMF_VT
@@ -249,7 +248,7 @@ buildTS <- function(
   ## DT EEMD ----
   DT <- DT[,lapply(.SD,function(x){
     # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-    AUX <- buildIMF(dt=dt,s=x,eemd.lib="eemd",boundary="wave",stop.rule="type5")
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
 
     nimf <- AUX$nimf
     i <- RemoveFirstIMF_DT

@@ -4,7 +4,7 @@
 #' @param s numeric vector
 #' @param t numeric vector
 #' @param dt numeric
-#' @param eemd.lib string
+#' @param method string
 #' @param boundary string
 #' @param max.imf integer
 #' @param noise.type string
@@ -18,9 +18,9 @@
 #'
 #' @examples
 #'
-buildIMF <- function(s,t=NULL,dt=NULL,eemd.lib="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
+buildIMF <- function(s,t=NULL,dt=NULL,method="emd",boundary="wave", max.imf=20,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
-
+stopifnot(!is.null(s) && tolower(method) %in% c("emd","semd","eemd","ceemd") && tolower(stop.rule) %in% c("type1","type2","type3","type4","type5") && tolower(boundary) %in% c("wave","spline","mirror","extrapolate") && noise.type %in% c("uniform","gaussian") )
 
   . <- NULL
   if(is.null(dt) & !is.null(t)){
@@ -39,8 +39,7 @@ buildIMF <- function(s,t=NULL,dt=NULL,eemd.lib="eemd",boundary="wave", max.imf=1
   n <- nrow(DT)
   DT <- .trimZeros(DT)
 
-  # browser()
-  if(tolower(eemd.lib)=="eemd"){
+  if(tolower(method)=="emd"){
     AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
     M <- AUX$imf  |> as.data.table()
     NC <- ncol(M)
@@ -48,7 +47,19 @@ buildIMF <- function(s,t=NULL,dt=NULL,eemd.lib="eemd",boundary="wave", max.imf=1
     IMF <- M[,-NC,with = FALSE]
   }
 
-  if(tolower(eemd.lib)=="ceemd"){
+  if(tolower(method)=="eemd"){
+    AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
+    nimf <- AUX$nimf
+    DIR <- tempdir()
+   hht::EEMD(sig=DT$s, tt=DT$t,nimf=nimf,max.imf=max.imf,boundary=boundary,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule,trials.dir = DIR)
+   AUX <- EEMDCompile(trials.dir = DIR, trials=trials, nimf=nimf) |> suppressWarnings()
+   unlink(DIR,force = TRUE,recursive = TRUE)
+   IMF <- AUX$averaged.imfs |> as.data.table()
+    RES <- AUX$averaged.residue |> unname()
+    M <- data.table(IMF,RES)
+  }
+
+  if(tolower(method)=="ceemd"){
     AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
     IMF <- AUX$imf |> as.data.table()
     RES <- AUX$residue |> unname()
@@ -84,8 +95,6 @@ buildIMF <- function(s,t=NULL,dt=NULL,eemd.lib="eemd",boundary="wave", max.imf=1
   j <- as.integer(last(DT$t)/dt)
 
   RES=c(rep(0,times=i-1),RES)
-  # browser()
-
   RES <- c(RES,rep(0,times=n-length(RES)))
 
   Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
