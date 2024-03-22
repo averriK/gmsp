@@ -8,9 +8,9 @@ buildIMF(
   s,
   t = NULL,
   dt = NULL,
-  model = "eemd",
+  method = "emd",
   boundary = "wave",
-  max.imf = 15,
+  max.imf = 20,
   noise.type = "gaussian",
   noise.amp = 5e-08,
   trials = 10,
@@ -25,7 +25,7 @@ buildIMF(
 
 \item{dt}{numeric}
 
-\item{model}{string}
+\item{method}{string}
 
 \item{boundary}{string}
 

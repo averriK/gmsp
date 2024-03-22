@@ -297,7 +297,6 @@
 .getTm <- function(X,Fs=NULL,fmin = 0,fmax = Inf){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if(max(abs(X))==0) {return(0)}
-  # browser()
   NP <- length(X)
   # NFFT <- nextn(NP,factors = 2)
   AW <- 1/NP*fft(X ,inverse = FALSE)

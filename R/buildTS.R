@@ -12,6 +12,7 @@
 #' @param Detrend_VT boolean
 #' @param Detrend_DT boolean
 #' @param Rebuild_AT boolean
+#' @param EMD.method string
 #' @param RemoveFirstIMF_AT boolean
 #' @param RemoveLastIMF_AT boolean
 #' @param RemoveFirstIMF_VT boolean
@@ -52,12 +53,13 @@ buildTS <- function(
     Detrend_VT = FALSE,
     Detrend_DT = FALSE,
     PadZeros=TRUE,
-    RemoveFirstIMF_AT = FALSE,
-    RemoveLastIMF_AT = TRUE,
-    RemoveFirstIMF_VT = FALSE,
-    RemoveLastIMF_VT = TRUE,
-    RemoveFirstIMF_DT = FALSE,
-    RemoveLastIMF_DT = TRUE,
+    EMD.method ="emd",
+    RemoveFirstIMF_AT = 0,
+    RemoveLastIMF_AT = 0,
+    RemoveFirstIMF_VT = 0,
+    RemoveLastIMF_VT = 0,
+    RemoveFirstIMF_DT = 0,
+    RemoveLastIMF_DT = 0,
     Rebuild_AT = FALSE,
     TargetUnits = "mm",
     taper=2,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
@@ -178,17 +180,15 @@ buildTS <- function(
   ## AT EEMD ----
   # NP <-  nrow(AT)
   # ts <- seq(0,dt*(NP-1),dt)
-  if(RemoveFirstIMF_AT || RemoveLastIMF_AT){
-    AT <- AT[,lapply(.SD,function(x){
-      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
-
-      nimf <- AUX$nimf
-      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
-      imf <-  AUX$imf[,-xcols,with = FALSE]
-      return(rowSums(imf))
-    })]
-  }
+  AT <- AT[,lapply(.SD,function(x){
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
+    nimf <- AUX$nimf
+    i <- RemoveFirstIMF_AT
+    j <- RemoveLastIMF_AT
+    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+    return(x)
+  })]
 
 
   ## Padding Zeros ----
@@ -222,17 +222,17 @@ buildTS <- function(
   names(VT) <- OCID
 
   ## VT EEMD ----
-  if(RemoveFirstIMF_VT || RemoveLastIMF_VT){
-    VT <- VT[,lapply(.SD,function(x){
-      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
+  VT <- VT[,lapply(.SD,function(x){
+    # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
 
-      nimf <- AUX$nimf
-      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
-      imf <-  AUX$imf[,-xcols,with = FALSE]
-      return(rowSums(imf))
-    })]
-  }
+    nimf <- AUX$nimf
+    i <- RemoveFirstIMF_VT
+    j <- RemoveLastIMF_VT
+    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+    return(x)
+  })]
   ## Detrend VT ----
   if (Detrend_VT) {
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
@@ -246,19 +246,17 @@ buildTS <- function(
 
 
   ## DT EEMD ----
+  DT <- DT[,lapply(.SD,function(x){
+    # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
+    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
 
-  if(RemoveFirstIMF_DT || RemoveLastIMF_DT){
-    DT <- DT[,lapply(.SD,function(x){
-      # AUX <- buildIMF(t=ts,s=x,model="ceemd",trials=2)
-      AUX <- buildIMF(dt=dt,s=x,model="eemd",boundary="wave",stop.rule="type5")
-
-      nimf <- AUX$nimf
-      xcols <- c(ifelse(RemoveFirstIMF_AT,1,0),ifelse(RemoveLastIMF_AT,nimf,0))
-      imf <-  AUX$imf[,-xcols,with = FALSE]
-      return(rowSums(imf))
-    })]
-
-  }
+    nimf <- AUX$nimf
+    i <- RemoveFirstIMF_DT
+    j <- RemoveLastIMF_DT
+    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+    return(x)
+  })]
   ## Detrend DT ----
   if (Detrend_DT) {
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
