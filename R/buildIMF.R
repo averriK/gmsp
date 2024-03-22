@@ -17,6 +17,7 @@
 #' @export buildIMF
 #'
 #' @examples
+#'
 buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
@@ -60,18 +61,18 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-
+  nimf <- ncol(IMF)
   DATA <- NULL
   if(plot==TRUE){
+    M <- IMF
     offset <- 1.25*ceiling(max(M)-min(M))
 
-    nm <- ncol(M)
-    for(i in 1:nm){
-      j <- nm-i+1
+    for(i in 1:nimf){
+      j <- nimf-i+1
       M[[j]] <- M[[j]]+offset*i
     }
 
-    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nm+2),M)
+    AUX <- data.table(t=DT$t,"Residue"=RES,"Signal"=DT$s+offset*(nimf+2),M)
     ivars <- c("t")
     mvars <- colnames(AUX[, -c("t")])
     DATA <- melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
@@ -90,6 +91,8 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
   Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
   Oj <- data.table(matrix(0, nrow = i-1, ncol = ncol(IMF)))
   IMF <- rbindlist(list(Oj,IMF,Oi),use.names = FALSE)
+  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+
   return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=nimf,residue=RES,plot.data=DATA,plot.offset=offset))
 }
 
