@@ -61,14 +61,14 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
   wm <- 2*pi/Tm
   fm <- 1/Tm
   PGA <- IMF[,lapply(.SD, function(x) {max(abs(x))})]
-
+  nimf <- ncol(IMF)
   DATA <- NULL
   if(plot==TRUE){
+    M <- IMF
     offset <- 1.25*ceiling(max(M)-min(M))
 
-    nm <- ncol(M)
-    for(i in 1:nm){
-      j <- nm-i+1
+    for(i in 1:nimf){
+      j <- nimf-i+1
       M[[j]] <- M[[j]]+offset*i
     }
 
@@ -91,6 +91,8 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
   Oi <- data.table(matrix(0, nrow = n-j, ncol = ncol(IMF)))
   Oj <- data.table(matrix(0, nrow = i-1, ncol = ncol(IMF)))
   IMF <- rbindlist(list(Oj,IMF,Oi),use.names = FALSE)
+  names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
+
   return(list(s=s,t=t,fm=fm,Tm=Tm,pga=PGA,imf=IMF,nimf=nimf,residue=RES,plot.data=DATA,plot.offset=offset))
 }
 
