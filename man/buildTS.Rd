@@ -16,12 +16,13 @@ buildTS(
   Detrend_VT = FALSE,
   Detrend_DT = FALSE,
   PadZeros = TRUE,
-  RemoveFirstIMF_AT = FALSE,
-  RemoveLastIMF_AT = TRUE,
-  RemoveFirstIMF_VT = FALSE,
-  RemoveLastIMF_VT = TRUE,
-  RemoveFirstIMF_DT = FALSE,
-  RemoveLastIMF_DT = TRUE,
+  Denoise = FALSE,
+  RemoveFirstIMF_AT = 0,
+  RemoveLastIMF_AT = 0,
+  RemoveFirstIMF_VT = 0,
+  RemoveLastIMF_VT = 0,
+  RemoveFirstIMF_DT = 0,
+  RemoveLastIMF_DT = 0,
   Rebuild_AT = FALSE,
   TargetUnits = "mm",
   taper = 2,
@@ -51,6 +52,8 @@ buildTS(
 \item{Detrend_DT}{boolean}
 
 \item{PadZeros}{boolean}
+
+\item{Denoise}{boolean}
 
 \item{RemoveFirstIMF_AT}{boolean}
 

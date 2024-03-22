@@ -15,19 +15,20 @@ RECORD <- buildTS(
   UN=RAW$SourceUnits,
   Fmax=25,
   TrimZeros = TRUE,
+  Denoise = FALSE,
   Rebuild_AT = TRUE,
   TargetUnits="mm",
-  RemoveFirstIMF_AT = FALSE,
-  RemoveLastIMF_AT = TRUE,
-  RemoveFirstIMF_VT = FALSE,
-  RemoveLastIMF_VT = FALSE,
-  RemoveFirstIMF_DT = FALSE,
-  RemoveLastIMF_DT = TRUE,
+  RemoveFirstIMF_AT = 1,
+  RemoveLastIMF_AT = 0,
+  RemoveFirstIMF_VT = 1,
+  RemoveLastIMF_VT = 0,
+  RemoveFirstIMF_DT = 1,
+  RemoveLastIMF_DT = 0,
   NW=2048,
   OVLP=75)
 TSL <- RECORD$TSL
 
-ID_TARGET <- "AT"
+ID_TARGET <- "DT"
 OCID_TARGET <- "UP"
 DATA.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
 plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)

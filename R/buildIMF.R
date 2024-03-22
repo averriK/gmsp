@@ -4,7 +4,7 @@
 #' @param s numeric vector
 #' @param t numeric vector
 #' @param dt numeric
-#' @param model string
+#' @param eemd.lib string
 #' @param boundary string
 #' @param max.imf integer
 #' @param noise.type string
@@ -18,7 +18,7 @@
 #'
 #' @examples
 #'
-buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
+buildIMF <- function(s,t=NULL,dt=NULL,eemd.lib="eemd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
 
@@ -40,7 +40,7 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
   DT <- .trimZeros(DT)
 
   # browser()
-  if(tolower(model)=="eemd"){
+  if(tolower(eemd.lib)=="eemd"){
     AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
     M <- AUX$imf  |> as.data.table()
     NC <- ncol(M)
@@ -48,7 +48,7 @@ buildIMF <- function(s,t=NULL,dt=NULL,model="eemd",boundary="wave", max.imf=15,n
     IMF <- M[,-NC,with = FALSE]
   }
 
-  if(tolower(model)=="ceemd"){
+  if(tolower(eemd.lib)=="ceemd"){
     AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule)
     IMF <- AUX$imf |> as.data.table()
     RES <- AUX$residue |> unname()
