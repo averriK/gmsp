@@ -19,9 +19,8 @@ R1 <- buildTS(
   dt=RAW$dt,
   UN=RAW$SourceUnits,
   Taper=3,
-  Fmax=25,
+  Fmax=15,
   TrimZeros = TRUE,
-  Rebuild = FALSE,
   Resample = FALSE,
   Detrend.AT = TRUE,
   Detrend.VT = TRUE,
@@ -46,7 +45,7 @@ TSL <- R1$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
 xplot::plot.highchart(
-  color.palette ="Blue-Red",
+  color.palette ="Dynamic",
   yAxis.label =TRUE,
   plot.type="line",
   legend.layout="horizontal",
@@ -56,12 +55,13 @@ xplot::plot.highchart(
 
 # -----
 # Stage 2/ Remove Residues and 1 IMF (low freq) from AT
+devtools::load_all()
 
 R2 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  Fmax=25,
+  Fmax=15,
   Taper=3,
   Detrend.AT = TRUE,
   Detrend.VT = TRUE,
@@ -69,19 +69,19 @@ R2 <- buildTS(
   LowPass.AT = TRUE,
   LowPass.VT = TRUE,
   LowPass.DT = TRUE,
+  Rebuild = FALSE,
   Resample = FALSE,
   TrimZeros = TRUE,
-  Rebuild = FALSE,
   TargetUnits="mm",
   EMD.method="emd",
   EMD.AT = FALSE,
-  EMD.VT = FALSE,
+  EMD.VT = TRUE,
   EMD.DT = TRUE,
   removeIMF1.AT = 0,# 0
   removeIMFn.AT = 0,# 1:
-  removeIMF1.VT = 0,
-  removeIMFn.VT = 0,
-  removeIMF1.DT = 0,#
+  removeIMF1.VT = 1,
+  removeIMFn.VT = 2,
+  removeIMF1.DT = 1,#
   removeIMFn.DT = 4, # 1: works
   NW=2048,
   OVLP=75)
@@ -89,7 +89,7 @@ TSL <- R2$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
 xplot::plot.highchart(
-  color.palette ="Blue-Red",
+  color.palette ="Dynamic",
   yAxis.label =TRUE,
   plot.type="line",
   legend.layout="horizontal",
