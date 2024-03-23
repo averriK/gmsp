@@ -12,18 +12,24 @@ buildTS(
   Resample = TRUE,
   FlatZeros = TRUE,
   TrimZeros = TRUE,
-  Detrend_AT = TRUE,
-  Detrend_VT = FALSE,
-  Detrend_DT = FALSE,
+  Detrend.AT = TRUE,
+  Detrend.VT = FALSE,
+  Detrend.DT = FALSE,
+  LowPass.AT = FALSE,
+  LowPass.VT = FALSE,
+  LowPass.DT = FALSE,
   PadZeros = TRUE,
+  EMD.AT = TRUE,
+  EMD.VT = TRUE,
+  EMD.DT = TRUE,
   EMD.method = "emd",
-  RemoveFirstIMF_AT = 0,
-  RemoveLastIMF_AT = 0,
-  RemoveFirstIMF_VT = 0,
-  RemoveLastIMF_VT = 0,
-  RemoveFirstIMF_DT = 0,
-  RemoveLastIMF_DT = 0,
-  Rebuild_AT = FALSE,
+  removeIMF1.AT = 0,
+  removeIMFn.AT = 0,
+  removeIMF1.VT = 0,
+  removeIMFn.VT = 0,
+  removeIMF1.DT = 0,
+  removeIMFn.DT = 0,
+  Rebuild = FALSE,
   TargetUnits = "mm",
   taper = 2,
   NW = 2048,
@@ -45,29 +51,41 @@ buildTS(
 
 \item{TrimZeros}{boolean}
 
-\item{Detrend_AT}{boolean}
+\item{Detrend.AT}{boolean}
 
-\item{Detrend_VT}{boolean}
+\item{Detrend.VT}{boolean}
 
-\item{Detrend_DT}{boolean}
+\item{Detrend.DT}{boolean}
+
+\item{LowPass.AT}{boolean}
+
+\item{LowPass.VT}{boolean}
+
+\item{LowPass.DT}{boolean}
 
 \item{PadZeros}{boolean}
 
+\item{EMD.AT}{boolean}
+
+\item{EMD.VT}{boolean}
+
+\item{EMD.DT}{boolean}
+
 \item{EMD.method}{string}
 
-\item{RemoveFirstIMF_AT}{boolean}
+\item{removeIMF1.AT}{boolean}
 
-\item{RemoveLastIMF_AT}{boolean}
+\item{removeIMFn.AT}{boolean}
 
-\item{RemoveFirstIMF_VT}{boolean}
+\item{removeIMF1.VT}{boolean}
 
-\item{RemoveLastIMF_VT}{boolean}
+\item{removeIMFn.VT}{boolean}
 
-\item{RemoveFirstIMF_DT}{boolean}
+\item{removeIMF1.DT}{boolean}
 
-\item{RemoveLastIMF_DT}{boolean}
+\item{removeIMFn.DT}{boolean}
 
-\item{Rebuild_AT}{boolean}
+\item{Rebuild}{boolean}
 
 \item{TargetUnits}{character Units}
 

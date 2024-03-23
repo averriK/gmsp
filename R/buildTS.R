@@ -8,17 +8,24 @@
 #' @param PadZeros boolean
 #' @param TrimZeros boolean
 #' @param Resample boolean
-#' @param Detrend_AT boolean
-#' @param Detrend_VT boolean
-#' @param Detrend_DT boolean
-#' @param Rebuild_AT boolean
+#' @param Detrend.AT boolean
+#' @param Detrend.VT boolean
+#' @param Detrend.DT boolean
+#' @param LowPass.AT boolean
+#' @param LowPass.VT boolean
+#' @param LowPass.DT boolean
+#' @param Rebuild boolean
+#' @param EMD.AT boolean
+#' @param EMD.VT boolean
+#' @param EMD.DT boolean
+
 #' @param EMD.method string
-#' @param RemoveFirstIMF_AT boolean
-#' @param RemoveLastIMF_AT boolean
-#' @param RemoveFirstIMF_VT boolean
-#' @param RemoveLastIMF_VT boolean
-#' @param RemoveFirstIMF_DT boolean
-#' @param RemoveLastIMF_DT boolean
+#' @param removeIMF1.AT boolean
+#' @param removeIMFn.AT boolean
+#' @param removeIMF1.VT boolean
+#' @param removeIMFn.VT boolean
+#' @param removeIMF1.DT boolean
+#' @param removeIMFn.DT boolean
 #' @param taper integer
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
@@ -49,18 +56,24 @@ buildTS <- function(
     Resample = TRUE,
     FlatZeros = TRUE,
     TrimZeros = TRUE,
-    Detrend_AT = TRUE,
-    Detrend_VT = FALSE,
-    Detrend_DT = FALSE,
+    Detrend.AT = TRUE,
+    Detrend.VT = FALSE,
+    Detrend.DT = FALSE,
+    LowPass.AT = FALSE,
+    LowPass.VT = FALSE,
+    LowPass.DT = FALSE,
     PadZeros=TRUE,
+    EMD.AT = TRUE,
+    EMD.VT = TRUE,
+    EMD.DT = TRUE,
     EMD.method ="emd",
-    RemoveFirstIMF_AT = 0,
-    RemoveLastIMF_AT = 0,
-    RemoveFirstIMF_VT = 0,
-    RemoveLastIMF_VT = 0,
-    RemoveFirstIMF_DT = 0,
-    RemoveLastIMF_DT = 0,
-    Rebuild_AT = FALSE,
+    removeIMF1.AT = 0,
+    removeIMFn.AT = 0,
+    removeIMF1.VT = 0,
+    removeIMFn.VT = 0,
+    removeIMF1.DT = 0,
+    removeIMFn.DT = 0,
+    Rebuild = FALSE,
     TargetUnits = "mm",
     taper=2,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
     NW = 2048,
@@ -116,7 +129,7 @@ buildTS <- function(
 
 
   ## Flat Zeros (A+I)  ----
-  if (Detrend_AT) {
+  if (Detrend.AT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   if (FlatZeros == TRUE) {
@@ -131,7 +144,7 @@ buildTS <- function(
 
 
   ## Detrend AT ----
-  if (Detrend_AT) {
+  if (Detrend.AT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
 
@@ -140,7 +153,6 @@ buildTS <- function(
     TargetFs <- as.integer(4*Fmax) # 160/200 Hz
     Fpass_LP <- Fmax # 20/25 Hz
     Fstop_LP <- 1.2*Fmax # 25/30 Hz
-
     Fs <- 1/dt #
     df <- Fs / NW #
     fs <- seq(from = 0, by = df, length.out = NW / 2)
@@ -157,8 +169,8 @@ buildTS <- function(
     Fs <- TargetFs
     names(AT) <- OCID
   }
-
-  if (Detrend_AT) {
+  ## Detrend AT ----
+  if (Detrend.AT) {
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     # names(AT) <- OCID
   }
@@ -178,17 +190,17 @@ buildTS <- function(
 
 
   ## AT EEMD ----
-  # NP <-  nrow(AT)
-  # ts <- seq(0,dt*(NP-1),dt)
-  AT <- AT[,lapply(.SD,function(x){
-    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
-    nimf <- AUX$nimf
-    i <- RemoveFirstIMF_AT
-    j <- RemoveLastIMF_AT
-    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-    return(x)
-  })]
+  if (EMD.AT) {
+    AT <- AT[,lapply(.SD,function(x){
+      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=10)
+      nimf <- AUX$nimf
+      i <- removeIMF1.AT
+      j <- removeIMFn.AT
+      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+      return(x)
+    })]
+  }
 
 
   ## Padding Zeros ----
@@ -204,61 +216,79 @@ buildTS <- function(
 
   }
 
-  ## Build  Filter ----
-  Fs <- 1 / dt
+  ## Build  Filters ----
+  Fs <- 1/dt #
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
+  Fpass_LP <- Fmax # 20/25 Hz
+  Fstop_LP <- 1.2*Fmax # 25/30 Hz
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.01, Apass = 0.99)
 
-  FsNYQ <- Fs / 2 # 16
-  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
 
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
   ## Integrate AT ----
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-    x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(VT) <- OCID
+  ## Lowpass VT ----
+  if(LowPass.VT){
+    VT <- VT[, lapply(.SD, function(x) {
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+    })]
+    names(VT) <- OCID
+  }
+
 
   ## VT EEMD ----
-  VT <- VT[,lapply(.SD,function(x){
-    # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
+  if (EMD.VT) {
+    VT <- VT[,lapply(.SD,function(x){
+      # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
+      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=10)
 
-    nimf <- AUX$nimf
-    i <- RemoveFirstIMF_VT
-    j <- RemoveLastIMF_VT
-    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-    return(x)
-  })]
+      nimf <- AUX$nimf
+      i <- removeIMF1.VT
+      j <- removeIMFn.VT
+      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+      return(x)
+    })]
+  }
   ## Detrend VT ----
-  if (Detrend_VT) {
+  if (Detrend.VT) {
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   ## Integrate VT ----
   DT <- VT[, lapply(.SD, function(x) {
     x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
-    x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
   })]
   names(DT) <- OCID
 
 
-  ## DT EEMD ----
-  DT <- DT[,lapply(.SD,function(x){
-    # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-    AUX <- buildIMF(dt=dt,s=x,method=EMD.method)
+  ## Lowpass DT ----
+  if(LowPass.DT){
+    DT <- DT[, lapply(.SD, function(x) {
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+    })]
+    names(DT) <- OCID
+  }
 
-    nimf <- AUX$nimf
-    i <- RemoveFirstIMF_DT
-    j <- RemoveLastIMF_DT
-    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-    x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-    return(x)
-  })]
+  ## EMD DT ----
+  if (EMD.DT) {
+    DT <- DT[,lapply(.SD,function(x){
+      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=10)
+
+      nimf <- AUX$nimf
+      i <- removeIMF1.DT
+      j <- removeIMFn.DT
+      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+      return(x)
+    })]
+  }
   ## Detrend DT ----
-  if (Detrend_DT) {
+  if (Detrend.DT) {
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
 
@@ -275,35 +305,40 @@ buildTS <- function(
     AT <- rbindlist(list(O, AT))
 
   }
-  ## Rebuild AT   ----
-  if(Rebuild_AT){
 
-
+  if(Rebuild){
+    ## Derivate DT ----
     VT <- DT[, lapply(.SD, function(x){
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+
       return(x)
     })]
-
-    if (Detrend_VT) {
+    if(LowPass.VT){
+      VT <- AT[, lapply(.SD, function(x) {
+        x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      })]
+      names(VT) <- OCID
+    }
+    if (Detrend.VT) {
       VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     }
-    names(VT) <- OCID
+
+    ## Derivate VT ----
     AT <- VT[, lapply(.SD, function(x){
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
       return(x)
     })]
-
-
+    if(LowPass.AT){
+      AT <- AT[, lapply(.SD, function(x) {
+        x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      })]
+      names(AT) <- OCID
+    }
+    if (Detrend.AT) {
+      AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    }
   }
-  if (Detrend_AT) {
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
-  names(AT) <- OCID
-
-
-
 
 
   ## Homogenize rows ----
@@ -339,10 +374,10 @@ buildTS <- function(
   ## Pack Time Series  ----
   NP <-  nrow(AT)
   ts <- seq(0,dt*(NP-1),dt)
-  AUX <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
+  TSW <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
   ivars <- c("ts")
-  mvars <- colnames(AUX[, -c("ts")])
-  AUX <- data.table::melt(AUX, id.vars = ivars, measure.vars = mvars) |> na.omit()
+  mvars <- colnames(TSW[, -c("ts")])
+  AUX <- data.table::melt(TSW, id.vars = ivars, measure.vars = mvars) |> na.omit()
   TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
   ## Trim Records,  ----
   if(TrimZeros){
@@ -354,5 +389,5 @@ buildTS <- function(
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  return(list(TSL=TSL,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
+  return(list(TSL=TSL,TSW=TSW,Wo=Wo,PGAo=PGAo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
 }
