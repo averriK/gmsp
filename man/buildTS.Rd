@@ -12,7 +12,7 @@ buildTS(
   Resample = TRUE,
   FlatZeros = TRUE,
   TrimZeros = TRUE,
-  Detrend.AT = TRUE,
+  Detrend.AT = FALSE,
   Detrend.VT = FALSE,
   Detrend.DT = FALSE,
   LowPass.AT = FALSE,
@@ -31,7 +31,7 @@ buildTS(
   removeIMFn.DT = 0,
   Rebuild = FALSE,
   TargetUnits = "mm",
-  taper = 2,
+  Taper = 1,
   NW = 2048,
   OVLP = 75
 )
@@ -89,7 +89,7 @@ buildTS(
 
 \item{TargetUnits}{character Units}
 
-\item{taper}{integer}
+\item{Taper}{integer}
 
 \item{NW}{integer Windows Length}
 

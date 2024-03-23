@@ -18,7 +18,6 @@
 #' @param EMD.AT boolean
 #' @param EMD.VT boolean
 #' @param EMD.DT boolean
-
 #' @param EMD.method string
 #' @param removeIMF1.AT boolean
 #' @param removeIMFn.AT boolean
@@ -26,7 +25,7 @@
 #' @param removeIMFn.VT boolean
 #' @param removeIMF1.DT boolean
 #' @param removeIMFn.DT boolean
-#' @param taper integer
+#' @param Taper integer
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
@@ -56,7 +55,7 @@ buildTS <- function(
     Resample = TRUE,
     FlatZeros = TRUE,
     TrimZeros = TRUE,
-    Detrend.AT = TRUE,
+    Detrend.AT = FALSE,
     Detrend.VT = FALSE,
     Detrend.DT = FALSE,
     LowPass.AT = FALSE,
@@ -75,7 +74,7 @@ buildTS <- function(
     removeIMFn.DT = 0,
     Rebuild = FALSE,
     TargetUnits = "mm",
-    taper=2,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
+    Taper=1,#c(0,1,2,3) 0:None, 1:Amplitude, 2:Intensity, 3:Both
     NW = 2048,
     OVLP = 75) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
@@ -85,13 +84,13 @@ buildTS <- function(
   OK <- is.data.table(x) && !is.null(dt) && !is.null(UN)
   stopifnot(OK)
 
-  if(taper==0) {
+  if(Taper==0) {
     .taper <- function(x){x}
     FlatZeros <- FALSE}
 
-  if(taper==1) .taper <- function(x){.taperA(x)}
-  if(taper==2) .taper <- function(x){.taperI(x)}
-  if(taper==3) .taper <- function(x){.taperA(x)*.taperI(x)}
+  if(Taper==1) .taper <- function(x){.taperA(x)}
+  if(Taper==2) .taper <- function(x){.taperI(x)}
+  if(Taper==3) .taper <- function(x){.taperA(x)*.taperI(x)}
 
   ATo <- copy(x)
   ## Check Record ----
@@ -227,7 +226,7 @@ buildTS <- function(
 
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
-  ## Integrate AT ----
+  ## AT-> VT ----
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
   })]
@@ -236,16 +235,17 @@ buildTS <- function(
   if(LowPass.VT){
     VT <- VT[, lapply(.SD, function(x) {
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
     })]
     names(VT) <- OCID
   }
 
 
-  ## VT EEMD ----
+  ## EMD VT ----
   if (EMD.VT) {
     VT <- VT[,lapply(.SD,function(x){
       # AUX <- buildIMF(t=ts,s=x,eemd.lib="ceemd",trials=2)
-      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=10)
+      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=15)
 
       nimf <- AUX$nimf
       i <- removeIMF1.VT
@@ -270,6 +270,7 @@ buildTS <- function(
   if(LowPass.DT){
     DT <- DT[, lapply(.SD, function(x) {
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
     })]
     names(DT) <- OCID
   }
@@ -293,29 +294,31 @@ buildTS <- function(
   }
 
 
-  ## Padding Zeros ----
-  if(PadZeros){
-    NP <- nrow(AT)
-    NZ <- .getNZ(NP)
-    if (NZ > 0) {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
-    } else {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
-    }
-    AT <- rbindlist(list(O, AT))
 
-  }
-
+  ## Rebuild ----
   if(Rebuild){
+    ## Padding Zeros ----
+    if(PadZeros){
+      NP <- nrow(DT)
+      NZ <- .getNZ(NP)
+      if (NZ > 0) {
+        O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
+      } else {
+        O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
+      }
+      DT <- rbindlist(list(O, DT))
+
+    }
     ## Derivate DT ----
     VT <- DT[, lapply(.SD, function(x){
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-
       return(x)
     })]
+
     if(LowPass.VT){
       VT <- AT[, lapply(.SD, function(x) {
         x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+        return(x)
       })]
       names(VT) <- OCID
     }
@@ -324,6 +327,7 @@ buildTS <- function(
     }
 
     ## Derivate VT ----
+
     AT <- VT[, lapply(.SD, function(x){
       x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
       x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
@@ -332,6 +336,7 @@ buildTS <- function(
     if(LowPass.AT){
       AT <- AT[, lapply(.SD, function(x) {
         x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+        return(x)
       })]
       names(AT) <- OCID
     }
