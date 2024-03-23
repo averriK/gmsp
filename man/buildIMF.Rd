@@ -10,7 +10,7 @@ buildIMF(
   dt = NULL,
   method = "emd",
   boundary = "wave",
-  max.imf = 20,
+  max.imf = 15,
   noise.type = "gaussian",
   noise.amp = 5e-08,
   trials = 10,

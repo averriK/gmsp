@@ -1,56 +1,44 @@
 devtools::load_all()
-library(xplot)
-library(data.table)
+
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
-RSN_TARGET <- 577  #577 300 1500 1540
+RSN_TARGET <- 300  #577 300 1500 1540
+# RSN 300. VT has a low frequency noise
+RAW <- SET[[RSN_TARGET]] #577 300 1500
 
 # -----
-RAW <- SET[[RSN_TARGET]] #577 300 1500
-RECORD <- buildTS(
+# Stage 1/ Raw record
+
+R1 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
   Fmax=25,
   TrimZeros = TRUE,
-  Rebuild_AT = TRUE,
+  Rebuild = FALSE,
+    Resample = TRUE,
+  LowPass.AT = TRUE,
+  LowPass.VT = FALSE,
+  LowPass.DT = FALSE,
   TargetUnits="mm",
   EMD.method="emd",
-  RemoveFirstIMF_AT = 1,
-  RemoveLastIMF_AT = 1,
-  RemoveFirstIMF_VT = 0,
-  RemoveLastIMF_VT = 0,
-  RemoveFirstIMF_DT = 0,
-  RemoveLastIMF_DT = 0,
+  EMD.AT = FALSE,
+  EMD.VT = FALSE,
+  EMD.DT = FALSE,
+  removeIMF1.AT = 0,
+  removeIMFn.AT = 0,
+  removeIMF1.VT = 0,
+  removeIMFn.VT = 0,
+  removeIMF1.DT = 0,
+  removeIMFn.DT = 0,
   NW=2048,
   OVLP=75)
-TSL <- RECORD$TSL
+TSL <- R1$TSL
 ID_TARGET <- "VT"
 OCID_TARGET <- "UP"
-DATA.TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
-plot.ggplot2(DATA.TS, plot.type = "line",line.size=0.5)
-
-xplot::plot.highchart(
-  color.palette ="Blue-Red",
-  yAxis.label =TRUE,
-  plot.type="line",
-  legend.layout="horizontal",
-  legend.show=TRUE,
-  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
-  data=DATA.TS)
-
-
-s <- DT.TS$Y
-t <- DT.TS$X
-# -----
-
-AUX <- .buildIMF(t=t,s=s)
-IMF <- AUX$imf
-nimf <- ncol(IMF)
-sR <- IMF[,-c(1),with = FALSE][,rowSums(.SD)]
-DATA <- rbindlist(list(DATA.TS,data.table(X=t,Y=sR,ID="Filtered")))
+DATA <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
 xplot::plot.highchart(
   color.palette ="Blue-Red",
   yAxis.label =TRUE,
@@ -60,9 +48,12 @@ xplot::plot.highchart(
   yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
   data=DATA)
 
-
+# check imfs
+TS <- TSL[ID==ID_TARGET & OCID==OCID_TARGET]
+AUX <- buildIMF(t=TS$t,s=TS$s,method="emd",plot=TRUE)
 DATA <- AUX$plot.data
 offset <- AUX$plot.offset
+nimf <- AUX$nimf
 xplot::plot.highchart(
   color.palette ="ag_Sunset",
   yAxis.label =FALSE,
@@ -73,37 +64,44 @@ xplot::plot.highchart(
   yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
   yAxis.min=offset,
   data=DATA)
-# ----
 
+# -----
+# Stage 2/ Remove Residues and 1 IMF (low freq) from AT
 
-# ------
-# Deteccion de modos de baja frecuencia
-DT <- data.table(X=IMF$tt,M)
-setnames(DT,old=colnames(DT),new=stringr::str_replace(colnames(DT),pattern = "V","IMF-"))
-IVARS <- c("X")
-MVARS <- colnames(DT[, -c("X")])
-DT <- data.table::melt(DT, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-setnames(DT,old=c("variable","value"),new=c("ID","Y"))
-FFT.IMF <- DT[,.getFFT(.SD),by="ID"]
-
-# Plot Parameters
-#
-# kf <- 0.15
-# fnyq <- 1/dt/2
-# fmax <- round(kf*fnyq)
-# DT <- FFT.IMF[f<=fmax & f>=0][,.(X=f,Y=PSD,ID=ID)]
-#
-# plot.highchart(
-#   color.palette ="ag_Sunset",
-#   plot.height = max(500,150*NIMF),
-#   plot.type="spline",
-#   legend.layout="horizontal",
-#   legend.show=TRUE,
-#   xAxis.log = FALSE,yAxis.log = FALSE,
-#   yAxis.legend="PSD",xAxis.legend="Frequency[Hz]",group.legend="IMF",
-#   data=DT)
-
-
-# Sapply con 10 iteraciones a las tres direcciones de RAW directo\ y probar luego
-
-
+R2 <- buildTS(
+  x=RAW$AT,
+  dt=RAW$dt,
+  UN=RAW$SourceUnits,
+  Fmax=15,
+  LowPass.AT = TRUE,
+  LowPass.VT = TRUE,
+  LowPass.DT = TRUE,
+  Resample = TRUE,
+  TrimZeros = TRUE,
+  Rebuild = TRUE,
+  TargetUnits="mm",
+  EMD.method="emd",
+  EMD.AT = TRUE,
+  EMD.VT = FALSE,
+  EMD.DT = TRUE,
+  removeIMF1.AT = 0,# 0
+  removeIMFn.AT = 1,# 1:
+  removeIMF1.VT = 0,
+  removeIMFn.VT = 0,
+  removeIMF1.DT = 0,#
+  removeIMFn.DT = 1, # 1: works
+  NW=2048,
+  OVLP=75)
+TSL <- R2$TSL
+ID_TARGET <- "DT"
+OCID_TARGET <- "UP"
+DATA <- TSL[ID==ID_TARGET & OCID==OCID_TARGET,.(X=t,Y=s,ID=paste0(ID,".",OCID))]
+xplot::plot.highchart(
+  color.palette ="Blue-Red",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  yAxis.legend=paste0(ID_TARGET,".",OCID_TARGET),xAxis.legend="t",
+  data=DATA)
+# VT records takes too long... it seems that it takes too long to remove the 1st IMF
