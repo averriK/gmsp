@@ -18,10 +18,9 @@ buildTS(
   LowPass.AT = FALSE,
   LowPass.VT = FALSE,
   LowPass.DT = FALSE,
-  PadZeros = TRUE,
-  EMD.AT = TRUE,
-  EMD.VT = TRUE,
-  EMD.DT = TRUE,
+  EMD.AT = FALSE,
+  EMD.VT = FALSE,
+  EMD.DT = FALSE,
   EMD.method = "emd",
   removeIMF1.AT = 0,
   removeIMFn.AT = 0,
@@ -62,8 +61,6 @@ buildTS(
 \item{LowPass.VT}{boolean}
 
 \item{LowPass.DT}{boolean}
-
-\item{PadZeros}{boolean}
 
 \item{EMD.AT}{boolean}
 
