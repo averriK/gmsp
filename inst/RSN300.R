@@ -21,16 +21,13 @@ R1 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
-  Taper=3,
+  Order=2,
   Fmax=15,
   TrimZeros = TRUE,
   Resample = TRUE,
-  Detrend.AT = TRUE,
-  Detrend.VT = TRUE,
-  Detrend.DT = TRUE,
-  LowPass.AT = TRUE,
-  LowPass.VT = TRUE,
-  LowPass.DT = TRUE,
+
+  LowPass = TRUE,
+
   TargetUnits="mm",
   EMD.method="emd",
   EMD.AT = FALSE,
@@ -41,9 +38,7 @@ R1 <- buildTS(
   removeIMF1.VT = 0,
   removeIMFn.VT = 0,
   removeIMF1.DT = 0,
-  removeIMFn.DT = 0,
-  NW=2048,
-  OVLP=75)
+  removeIMFn.DT = 0)
 TSL <- R1$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]

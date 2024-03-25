@@ -88,38 +88,30 @@
 
 }
 
-.checkRecord <- function(X){
-  return(
-    !is.null(X) &&
-      is.list(X) &&
-      # is.data.table(X$AT) &&
-      # !any(is.na(X$AT)) &&
-      # nrow(X$AT)>0 &&
-      !any(is.na(colnames(X$AT))) &&
-      !is.na(X$dt) &&
-      length(X$dt)>0 &&
-      X$dt>0 &&
-      length(X$Units)>0
-  )
-}
-
-.length <- function(x) {
-  NP <- NULL
-  if(is.data.frame(x)) NP <- nrow(x)
-  if(is.vector(x)) NP <- length(x)
-  if(is.list(x)) NP <- map(x,length) |> unlist()
-  return(x)
-}
 
 .getNZ <- function(NP,OVLP=75,NW=1024){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   # Overlap Length
   NO <- OVLP*NW/100
-  NB   <- (NP-NO)/(NW-NO)
-  TargetNP  <- ceiling(NB)*(NW-NO)+NO
+  NB   <- ceiling((NP-NO)/(NW-NO))
+  TargetNP  <- NB*(NW-NO)+NO
+  NZ <- TargetNP-NP
+  return(NZ)
+}
+
+.padZeros <- function(x,OVLP=75,NW=1024){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  NP <- nrow(x)
+  NO <- OVLP*NW/100
+  NB   <- ceiling((NP-NO)/(NW-NO))
+  TargetNP  <- NB*(NW-NO)+NO
   NZ <- TargetNP-NP
 
-  return(NZ)
+  O <- data.table(sapply(x, function(x) rep(0, NZ)))
+  x <- rbind(x, O)
+  return(x)
+
+
 }
 
 .ffilter <- function (x, f, custom, ovlp=75,wl=1024) {

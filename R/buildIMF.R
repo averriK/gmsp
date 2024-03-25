@@ -34,7 +34,7 @@ stopifnot(!is.null(s) && tolower(method) %in% c("emd","eemd","ceemd") && tolower
 
   . <- NULL
   n <- length(s)
-  stopifnot(n>1)
+  stopifnot(n>4)
   if(!is.null(t)){
     dt <- diff(t) |> mean()
   }
