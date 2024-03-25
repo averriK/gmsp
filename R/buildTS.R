@@ -5,7 +5,6 @@
 #' @param UN character
 #' @param Fmax integer
 #' @param FlatZeros boolean
-#' @param PadZeros boolean
 #' @param TrimZeros boolean
 #' @param Resample boolean
 #' @param Detrend.AT boolean
@@ -61,10 +60,9 @@ buildTS <- function(
     LowPass.AT = FALSE,
     LowPass.VT = FALSE,
     LowPass.DT = FALSE,
-    PadZeros=TRUE,
-    EMD.AT = TRUE,
-    EMD.VT = TRUE,
-    EMD.DT = TRUE,
+    EMD.AT = FALSE,
+    EMD.VT = FALSE,
+    EMD.DT = FALSE,
     EMD.method ="emd",
     removeIMF1.AT = 0,
     removeIMFn.AT = 0,
@@ -202,18 +200,7 @@ buildTS <- function(
   }
 
 
-  ## Padding Zeros ----
-  if(PadZeros){
-    NP <- nrow(AT)
-    NZ <- .getNZ(NP)
-    if (NZ > 0) {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
-    } else {
-      O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
-    }
-    AT <- rbindlist(list(O, AT))
 
-  }
 
   ## Build  Filters ----
   Fs <- 1/dt #
@@ -227,6 +214,14 @@ buildTS <- function(
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
   ## AT-> VT ----
+  NP <- nrow(AT)
+  NZ <- .getNZ(NP)
+  if (NZ > 0) {
+    O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
+  } else {
+    O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
+  }
+  AT <- rbindlist(list(O, AT))
   VT <- AT[, lapply(.SD, function(x) {
     x <- .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
   })]
@@ -259,7 +254,17 @@ buildTS <- function(
   if (Detrend.VT) {
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
+
+  ## Lowpass VT ----
+  if(LowPass.VT){
+    VT <- VT[, lapply(.SD, function(x) {
+      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+      return(x)
+    })]
+    names(VT) <- OCID
+  }
   ## Integrate VT ----
+
   DT <- VT[, lapply(.SD, function(x) {
     x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI)
   })]

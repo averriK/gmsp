@@ -1,4 +1,7 @@
 devtools::load_all()
+# Bugs. High frequency noise in DT
+# EMD fails on VT. Takes too long
+# EMD fails on AT removing IMF1
 
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
@@ -21,7 +24,7 @@ R1 <- buildTS(
   Taper=3,
   Fmax=15,
   TrimZeros = TRUE,
-  Resample = FALSE,
+  Resample = TRUE,
   Detrend.AT = TRUE,
   Detrend.VT = TRUE,
   Detrend.DT = TRUE,
@@ -75,15 +78,13 @@ R2 <- buildTS(
   TargetUnits="mm",
   EMD.method="emd",
   EMD.AT = TRUE,
-  EMD.VT = TRUE,
+  EMD.VT = FALSE,
   EMD.DT = TRUE,
-  removeIMF1.AT = 1,# 0
   removeIMFn.AT = 0,# 1:
-  removeIMF1.VT = 0,
-  removeIMFn.VT = 1,
-  removeIMF1.DT = 0,#
-  removeIMFn.DT = 1, # 1: works
-  NW=2048,
+  removeIMFn.VT = 0,
+  removeIMF1.DT = 1,#
+  removeIMFn.DT = 4, # 1: works
+  NW=1024,
   OVLP=75)
 TSL <- R2$TSL
 
