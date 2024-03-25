@@ -278,7 +278,7 @@ buildTS <- function(
   ## EMD DT ----
   if (EMD.DT) {
     DT <- DT[,lapply(.SD,function(x){
-      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=10)
+      AUX <- buildIMF(dt=dt,s=x,method=EMD.method,max.imf=15)
 
       nimf <- AUX$nimf
       i <- removeIMF1.DT
@@ -297,65 +297,45 @@ buildTS <- function(
 
   ## Rebuild ----
   if(Rebuild){
-    ## Padding Zeros ----
-    if(PadZeros){
-      NP <- nrow(DT)
-      NZ <- .getNZ(NP)
-      if (NZ > 0) {
-        O <- data.table()[, (colnames(AT)) := list(rep(0, NZ))]
-      } else {
-        O <- data.table()[, (colnames(AT)) := list(rep(0, NW))]
-      }
-      DT <- rbindlist(list(O, DT))
-
-    }
+    # browser()
+    # Flat Zeros on DT based on AT
+    NMX <- min(nrow(AT), nrow(DT))
+    AT <- AT[-((NMX):.N)]
+    DT <- DT[-((NMX):.N)]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)*.taperI(x)}))]
+    idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+    DT <- DT[idx]
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
     ## Derivate DT ----
     VT <- DT[, lapply(.SD, function(x){
-      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      return(x)
-    })]
-
-    if(LowPass.VT){
-      VT <- AT[, lapply(.SD, function(x) {
-        x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-        return(x)
-      })]
-      names(VT) <- OCID
-    }
+      .derivate(s=x,dt=dt) })]
     if (Detrend.VT) {
       VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     }
 
     ## Derivate VT ----
+    AT <-  VT[, lapply(.SD, function(x){
+      .derivate(s=x,dt=dt) })]
 
-    AT <- VT[, lapply(.SD, function(x){
-      x <- NW * .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HD)
-      x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-      return(x)
-    })]
-    if(LowPass.AT){
-      AT <- AT[, lapply(.SD, function(x) {
-        x <- seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-        return(x)
-      })]
-      names(AT) <- OCID
-    }
     if (Detrend.AT) {
       AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     }
+    NMX <- min(nrow(AT), nrow(DT))
+    AT <- AT[-((NMX):.N)]
+    VT <- VT[-((NMX):.N)]
+    DT <- DT[-((NMX):.N)]
+
   }
-
-
   ## Homogenize rows ----
 
   NMX <- min(nrow(AT), nrow(VT), nrow(DT))
   AT <- AT[-((NMX):.N)]
   VT <- VT[-((NMX):.N)]
   DT <- DT[-((NMX):.N)]
-
   ## Flat Zeros (A+I)  ----
   if (FlatZeros == TRUE) {
-    Wo <- AT[,.(sapply(.SD, function(x) {.taper(x)}))]
+    # browser()
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
 
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
     VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
@@ -365,6 +345,8 @@ buildTS <- function(
     names(VT) <- OCID
     names(DT) <- OCID
   }
+
+
 
 
   ## Restore Scale ----

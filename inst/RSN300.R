@@ -69,20 +69,20 @@ R2 <- buildTS(
   LowPass.AT = TRUE,
   LowPass.VT = TRUE,
   LowPass.DT = TRUE,
-  Rebuild = FALSE,
+  Rebuild = TRUE,
   Resample = FALSE,
   TrimZeros = TRUE,
   TargetUnits="mm",
   EMD.method="emd",
-  EMD.AT = FALSE,
+  EMD.AT = TRUE,
   EMD.VT = TRUE,
   EMD.DT = TRUE,
-  removeIMF1.AT = 0,# 0
+  removeIMF1.AT = 1,# 0
   removeIMFn.AT = 0,# 1:
-  removeIMF1.VT = 1,
-  removeIMFn.VT = 2,
-  removeIMF1.DT = 1,#
-  removeIMFn.DT = 4, # 1: works
+  removeIMF1.VT = 0,
+  removeIMFn.VT = 1,
+  removeIMF1.DT = 0,#
+  removeIMFn.DT = 1, # 1: works
   NW=2048,
   OVLP=75)
 TSL <- R2$TSL

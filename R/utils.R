@@ -13,36 +13,31 @@
 #' @noRd
 #'
 
-.buildPlotIMF <- function(imf){
-  on.exit(expr = {rm(list = ls())}, add = TRUE)
+.derivate <- function(s,t=NULL,dt=NULL){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  n <- length(s)
+  vt <- numeric(n)
+  stopifnot(n>4)
+  if(!is.null(t)){
+    dt <- diff(t) |> mean()
+  }
+  t <- seq(0,(n-1)*dt,by=dt)
 
-  . <- NULL
-  M <- imf
-  offset <- 1.25*ceiling(max(M)-min(M))
-  nimf <- ncol(M)
-  for(i in 1:nimf){
-    j <- nimf-i+1
-    M[[j]] <- M[[j]]+offset*i
+
+  # Four-point central difference for the bulk
+  for (i in 3:(n-2)) {
+    vt[i] <- (-s[i+2] + 8*s[i+1] - 8*s[i-1] + s[i-2]) / (12 * dt)
   }
 
+  # Three-point differences for the edges
+  vt[1] <- (-3*s[1] + 4*s[2] - s[3]) / (2 * dt)
+  vt[2] <- (-s[4] + 4*s[3] - 3*s[2]) / (2 * dt)
+  vt[n-1] <- (3*s[n-1] - 4*s[n-2] + s[n-3]) / (2 * dt)
+  vt[n] <- (3*s[n] - 4*s[n-1] + s[n-2]) / (2 * dt)
 
-  AUX <- data.table(t=imf$t,"Residue"=imf$residue,"Signal"=imf$s+offset*(nimf+2),M)
-  IVARS <- c("t")
-  MVARS <- colnames(AUX[, -c("t")])
-  DATA <- melt(AUX, id.vars = IVARS, measure.vars = MVARS) |> na.omit()
-  DATA <- DATA[,.(X=t,Y=value,ID=variable)]
-  xplot::plot.highchart(
-    color.palette ="ag_Sunset",
-    yAxis.label =FALSE,
-    plot.height = max(1000,100*nimf),
-    plot.type="line",
-    legend.layout="horizontal",
-    legend.show=TRUE,
-    yAxis.legend="IMF",xAxis.legend="t",group.legend="IMF",
-    yAxis.min=-offset,
-    data=DATA)
+  return(vt)
+
 }
-
 
 .trimZeros <- function(.SD,COL="s",offset=0){
   n <- nrow(.SD)
@@ -79,7 +74,6 @@
   LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
   return(LP * HP)
 }
-
 
 .taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.9995,Lpass=0.995){
   n <- length(x)
