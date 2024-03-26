@@ -6,87 +6,42 @@
 \usage{
 buildTS(
   x,
-  dt,
+  ts = NULL,
+  dt = NULL,
   UN,
-  Fmax = 25,
+  Order = 2,
+  Fmax = 16,
   Resample = TRUE,
-  FlatZeros = TRUE,
-  TrimZeros = TRUE,
-  Detrend.AT = FALSE,
-  Detrend.VT = FALSE,
-  Detrend.DT = FALSE,
-  LowPass.AT = FALSE,
-  LowPass.VT = FALSE,
-  LowPass.DT = FALSE,
-  EMD.AT = FALSE,
-  EMD.VT = FALSE,
-  EMD.DT = FALSE,
-  EMD.method = "emd",
-  removeIMF1.AT = 0,
-  removeIMFn.AT = 0,
-  removeIMF1.VT = 0,
-  removeIMFn.VT = 0,
-  removeIMF1.DT = 0,
-  removeIMFn.DT = 0,
-  Rebuild = FALSE,
+  LowPass = FALSE,
+  removeIMF1 = 0,
+  removeIMFn = 0,
   TargetUnits = "mm",
-  Taper = 1,
-  NW = 2048,
+  NW = 1024,
   OVLP = 75
 )
 }
 \arguments{
 \item{x}{data.table}
 
+\item{ts}{numeric}
+
 \item{dt}{numeric}
 
 \item{UN}{character}
+
+\item{Order}{integer}
 
 \item{Fmax}{integer}
 
 \item{Resample}{boolean}
 
-\item{FlatZeros}{boolean}
+\item{LowPass}{boolean}
 
-\item{TrimZeros}{boolean}
+\item{removeIMF1}{boolean}
 
-\item{Detrend.AT}{boolean}
-
-\item{Detrend.VT}{boolean}
-
-\item{Detrend.DT}{boolean}
-
-\item{LowPass.AT}{boolean}
-
-\item{LowPass.VT}{boolean}
-
-\item{LowPass.DT}{boolean}
-
-\item{EMD.AT}{boolean}
-
-\item{EMD.VT}{boolean}
-
-\item{EMD.DT}{boolean}
-
-\item{EMD.method}{string}
-
-\item{removeIMF1.AT}{boolean}
-
-\item{removeIMFn.AT}{boolean}
-
-\item{removeIMF1.VT}{boolean}
-
-\item{removeIMFn.VT}{boolean}
-
-\item{removeIMF1.DT}{boolean}
-
-\item{removeIMFn.DT}{boolean}
-
-\item{Rebuild}{boolean}
+\item{removeIMFn}{boolean}
 
 \item{TargetUnits}{character Units}
-
-\item{Taper}{integer}
 
 \item{NW}{integer Windows Length}
 
