@@ -133,65 +133,108 @@ buildTS <- function(
     names(X) <- OCID
   }
 
-  # Trim Zeros
-  # Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-  # X <- X[idx]
-
-  # Case #1. Acceleration Time Histories
+  # Case #2. Acceleration Time Histories
   if(Order==2){
     AT <- X
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    names(AT) <- OCID
+
     VT <- AT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
+    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     names(VT) <- OCID
+
     DT <- VT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
     names(DT) <- OCID
   }
 
-  # Case #2. Velocity Time Histories
+  # Case #1. Velocity Time Histories
   if(Order==1){
     VT <- X
+    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+
     DT <- VT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    names(DT) <- OCID
+
+    AT <-  VT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
+    AT <- AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    names(AT) <- OCID
   }
 
-  # Case #3. Displacement Time Historyes
+  # Case #0. Displacement Time Historyes
   if(Order==0){
     DT <- X
+    VT <- DT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
+    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+
+    AT <-  VT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+
   }
-  NMX <- min(nrow(AT), nrow(DT))
-  AT <- AT[-((NMX):.N)]
-  VT <- VT[-((NMX):.N)]
-  DT <- DT[-((NMX):.N)]
 
 
 
-  ## Rebuild ----
-  if(!Rebuild){
+  if (!Rebuild) {
+    NMX <- min(nrow(AT), nrow(VT), nrow(DT))
+    AT <- AT[-((NMX):.N)]
+    VT <- VT[-((NMX):.N)]
+    DT <- DT[-((NMX):.N)]
+    # Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
 
-    Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-    AT <- AT[idx]
-    VT <- VT[idx]
-    DT <- DT[idx]
 
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)*.taperI(x)}))]
+    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+
+
+    # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+    # AT <- AT[idx]
+    # VT <- VT[idx]
+    # DT <- DT[idx]
     AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
+
+
+
   if(Rebuild){
-    Wo <- DT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+    Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)}))]
     idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
     DT <- DT[idx]
-    # EMD DT ----
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
 
+
+
+    # EMD DT ----
     ## Derivate DT ----
     VT <- DT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
-    # EMD cT ----
+    VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
 
+    # EMD cT ----
     ## Derivate VT ----
     AT <-  VT[, lapply(.SD, function(x){.derivate(s=x,dt=dt) })]
-
+    AT <- AT[, .(sapply(.SD, function(x){x-mean(x)}))]
 
   }
+
+  NMX <- min(nrow(AT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
+  # # .taperI muy restrictivo para aceleraciones
+  # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+  # AT <- AT[idx]
+  # VT <- VT[idx]
+  # DT <- DT[idx]
+  # AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+
 
   ## Restore Scale ----
 

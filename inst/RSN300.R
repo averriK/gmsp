@@ -26,7 +26,7 @@ R1 <- buildTS(
   TrimZeros = TRUE,
   Resample = FALSE,
   LowPass = TRUE,
-  Rebuild = FALSE,
+  Rebuild = TRUE,
   TargetUnits="mm",
   removeIMF1.AT = 0,
   removeIMFn.AT = 0,
