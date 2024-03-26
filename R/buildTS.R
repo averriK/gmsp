@@ -12,9 +12,6 @@
 #' @param Detrend boolean
 #' @param LowPass boolean
 #' @param Rebuild boolean
-#' @param EMD.AT boolean
-#' @param EMD.VT boolean
-#' @param EMD.DT boolean
 #' @param removeIMF1.AT boolean
 #' @param removeIMFn.AT boolean
 #' @param removeIMF1.VT boolean
@@ -47,15 +44,12 @@
 buildTS <- function(
     x, ts=NULL ,dt=NULL, UN,
     Order=2,
-    Fmax = 25,
+    Fmax = 16,
     Resample = TRUE,
     FlatZeros = TRUE,
     TrimZeros = TRUE,
     Detrend = FALSE,
     LowPass = FALSE,
-    EMD.AT = FALSE,
-    EMD.VT = FALSE,
-    EMD.DT = FALSE,
     removeIMF1.AT = 0,
     removeIMFn.AT = 0,
     removeIMF1.VT = 0,
@@ -69,9 +63,9 @@ buildTS <- function(
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 
   . <- NULL
-  X <- copy(x)
+  X <- copy(x) |> as.data.table()
 
-  NP <- ifelse(is.data.table(X),nrow(X),ifelse(is.vector(X),length(X)))
+  NP <- nrow(X)
   stopifnot(NP>4 && NP>=NW)
   if(!is.null(ts)){
     dt <- diff(ts) |> mean()
@@ -93,18 +87,16 @@ buildTS <- function(
     X <- X[,.(sapply(.SD, function(x) {x * SFU}))]
   }
 
-
-  # ATo <- copy(x)
   OCID <- names(X)
 
 
 
 
   ## Set Scale Reference ----
-  DUMMY <- NULL
   Ao <- apply(X, 2, function(x) { max(abs(x))})
   ## Scale record ----
   X <-X[, .(sapply(.SD, function(x){x/max(abs(x))}))]
+  # Detrend
   X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
 
 
@@ -113,40 +105,25 @@ buildTS <- function(
     Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
     X <- X[, lapply(seq_along(.SD), function(i) .SD[[i]] * Wo[[i]])]
     names(X) <- OCID
-    X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
+
   }
 
 
   ## Resample ----
   if(Resample){
-    TargetFs <- as.integer(4*Fmax) # 160/200 Hz
-    Fpass_LP <- Fmax # 20/25 Hz
-    Fstop_LP <- 1.2*Fmax # 25/30 Hz
-    Fs <- 1/dt #
-    df <- Fs / NW #
-    fs <- seq(from = 0, by = df, length.out = NW / 2)
-    LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
-
-
-    X <- X[, lapply(.SD, function(x) {
-      ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-    })]
-    X <- X[, lapply(.SD, function(x) {
-      signal::resample(x, TargetFs, Fs)
-
-    })]
+    TargetFs <- as.integer(5*Fmax) # 80/200 Hz
+    X <- .resample(X,Fs=Fs,Fmax=Fmax,NW=NW,OVLP=OVLP)
     Fs <- TargetFs
-    names(X) <- OCID
-    X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
+    dt <- 1/Fs
   }
 
-
-
-
-  df <- Fs / NW # 0.03125#
-  fs <- seq(from = 0, by = df, length.out = NW / 2)
-  dt <- 1/Fs
-  NP <- nrow(X)
+#
+#
+#
+#   df <- Fs / NW # 0.03125#
+#   fs <- seq(from = 0, by = df, length.out = NW / 2)
+#   dt <- 1/Fs
+#   NP <- nrow(X)
 
   ## Flat Zeros (A+I)  ----
 
@@ -156,92 +133,37 @@ buildTS <- function(
     names(X) <- OCID
   }
 
+  # Trim Zeros
+  Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+  X <- X[idx]
 
-
-
-
-
-
-  ## Build  Filters ----
-  Fs <- 1/dt #
-  df <- Fs / NW # 0.03125#
-  fs <- seq(from = 0, by = df, length.out = NW / 2)
-  Fpass_LP <- Fmax # 20/25 Hz
-  Fstop_LP <- 1.2*Fmax # 25/30 Hz
-  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(Fstop_LP / df) * df, Fpass = round(Fpass_LP / df) * df, Astop = 0.01, Apass = 0.99)
-
-
-  HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
-  HD <- .buildDerivateFilter(f = fs) ## Derivate Filter
-  X <- .padZeros(X)
-  X <- X[, lapply(.SD, function(x) {
-    seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
-  })]
-  X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
-  names(X) <- OCID
-
-
-
-  ## AT-> VT ----
-  # if X is AT, integrate velocities and displacements
-  if(Order==2){ # Accelerations
+  # Case #1. Acceleration Time Histories
+  if(Order==2){
     AT <- X
-    VT <- AT[, lapply(.SD, function(x) {
-      .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-    })]
-    VT <- VT[, lapply(.SD, function(x) {
-      seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)})]
-    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
-    names(VT) <- OCID
-    DT <- VT[, lapply(.SD, function(x) {
-      .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-    })]
-
+    VT <- AT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
+    DT <- VT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
   }
 
-  if(Order==1){# Velocities
+  # Case #2. Velocity Time Histories
+  if(Order==1){
     VT <- X
-
-    Wo <- VT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-    idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-    VT <- VT[idx]
-
-    DT <- VT[, lapply(.SD, function(x) {
-      .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-    })]
-    DT <- DT[, lapply(.SD, function(x) {
-      seewave::ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)})]
-    names(DT) <- OCID
+    DT <- VT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
   }
 
-  if(Order==0){# Displacements
+  # Case #3. Displacement Time Historyes
+  if(Order==0){
     DT <- X
   }
-  # Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x)*.taperI(x)}))]
-  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-  # AT <- AT[idx]
+  NMX <- min(nrow(AT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
 
-  ## EMD DT ----
-  if (EMD.DT) {
-    DT <- DT[,lapply(.SD,function(x){
-      AUX <- buildIMF(dt=dt,s=x,method="emd",max.imf=15)
-
-      nimf <- AUX$nimf
-      i <- removeIMF1.DT
-      j <- removeIMFn.DT
-      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-      return(x)
-    })]
-  }
 
 
   ## Rebuild ----
   if(!Rebuild){
-    NMX <- min(nrow(AT), nrow(DT))
-    AT <- AT[-((NMX):.N)]
-    VT <- VT[-((NMX):.N)]
-    DT <- DT[-((NMX):.N)]
 
     Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
     idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
@@ -254,31 +176,20 @@ buildTS <- function(
     DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
   if(Rebuild){
-
-    # NMX <- min(nrow(AT), nrow(DT))
-    # AT <- AT[-((NMX):.N)]
-    # DT <- DT[-((NMX):.N)]
     Wo <- DT[,.(sapply(.SD, function(x) {.taperI(x)}))]
     idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
     DT <- DT[idx]
-    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    # EMD DT ----
+
     ## Derivate DT ----
-    VT <- DT[, lapply(.SD, function(x){
-      .derivate(s=x,dt=dt) })]
-    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    VT <- DT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
+    # EMD cT ----
 
     ## Derivate VT ----
-    AT <-  VT[, lapply(.SD, function(x){
-      .derivate(s=x,dt=dt) })]
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  }
-  ## Homogenize rows ----
+    AT <-  VT[, lapply(.SD, function(x){.derivate(s=x,dt=dt) })]
 
-  # NMX <- min(nrow(AT), nrow(VT), nrow(DT))
-  # AT <- AT[-((NMX):.N)]
-  # VT <- VT[-((NMX):.N)]
-  # DT <- DT[-((NMX):.N)]
-  ## Flat Zeros (A+I)  ----
+
+  }
 
   ## Restore Scale ----
 
@@ -298,9 +209,9 @@ buildTS <- function(
   AUX <- data.table::melt(TSW, id.vars = ivars, measure.vars = mvars) |> na.omit()
   TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
   ## Trim Records,  ----
-  if(TrimZeros){
-    #Warning: Different time scales from now on
-    TSL <- TSL[,.trimZeros(.SD),by=c("OCID","ID")]}
+  # if(TrimZeros){
+  #   #Warning: Different time scales from now on
+  #   TSL <- TSL[,.trimZeros(.SD),by=c("OCID","ID")]}
 
   ## Return ----
   Fs <- 1 / dt

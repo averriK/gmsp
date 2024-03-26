@@ -12,11 +12,78 @@
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
-
-.derivate <- function(s,t=NULL,dt=NULL){
+.integrate <- function(dX,dt,Fmax=15,NW=1024,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  n <- length(s)
-  vt <- numeric(n)
+  OCID <- names(dX)
+  Fpass_LP <- Fmax # 20/25 Hz
+  Fstop_LP <- 1.2*Fmax # 25/30 Hz
+  # Flat Zeros
+  Wo <- dX[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  dX <- dX[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+  # Build filter
+  Fs <- 1/dt #
+  df <- Fs / NW #
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
+  # Pad Zeros
+  dX <- .padZeros(dX)
+  # Integrate
+  X <- dX[, lapply(.SD, function(x) {
+  .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
+})]
+  # Flat Zeros
+  Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  X <- X[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+  names(X) <- OCID
+  return(X)
+}
+
+.resample <- function(X,dt,TargetFs,Fmax,NW=1024,OVLP=75){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  OCID <- names(X)
+  Fs=1/dt
+
+  Fpass_LP <- Fmax # 20/25 Hz
+  Fstop_LP <- 1.2*Fmax # 25/30 Hz
+  df <- Fs / NW #
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  X <- X[, lapply(.SD, function(x) {
+    ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+  })]
+  X <- X[, lapply(.SD, function(x) {
+    signal::resample(x, TargetFs, Fs)
+  })]
+  X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
+  names(X) <- OCID
+return(X)
+}
+
+
+.EMDfilter <- function(X,t=NULL,dt=NULL,removeIMF1=0,removeIMFn=0){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  if (removeIMF1>0 ||removeIMFn>0) {
+    X <- X[,lapply(.SD,function(x){
+      AUX <- buildIMF(dt=dt,s=x,method="emd",max.imf=15)
+
+      nimf <- AUX$nimf
+      i <- removeIMF1.AT
+      j <- removeIMFn.AT
+      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+      X <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+
+    })]
+  }
+  return(X)
+}
+
+
+.derivate <- function(X,t=NULL,dt=NULL){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  n <- length(X)
+  dX <- numeric(n)
   stopifnot(n>4)
   if(!is.null(t)){
     dt <- diff(t) |> mean()
@@ -26,16 +93,16 @@
 
   # Four-point central difference for the bulk
   for (i in 3:(n-2)) {
-    vt[i] <- (-s[i+2] + 8*s[i+1] - 8*s[i-1] + s[i-2]) / (12 * dt)
+    dX[i] <- (-X[i+2] + 8*X[i+1] - 8*X[i-1] + X[i-2]) / (12 * dt)
   }
 
   # Three-point differences for the edges
-  vt[1] <- (-3*s[1] + 4*s[2] - s[3]) / (2 * dt)
-  vt[2] <- (-s[4] + 4*s[3] - 3*s[2]) / (2 * dt)
-  vt[n-1] <- (3*s[n-1] - 4*s[n-2] + s[n-3]) / (2 * dt)
-  vt[n] <- (3*s[n] - 4*s[n-1] + s[n-2]) / (2 * dt)
+  dX[1] <- (-3*X[1] + 4*X[2] - X[3]) / (2 * dt)
+  dX[2] <- (-X[4] + 4*X[3] - 3*X[2]) / (2 * dt)
+  dX[n-1] <- (3*X[n-1] - 4*X[n-2] + X[n-3]) / (2 * dt)
+  dX[n] <- (3*X[n] - 4*X[n-1] + X[n-2]) / (2 * dt)
 
-  return(vt)
+  return(dX)
 
 }
 
