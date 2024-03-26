@@ -1,7 +1,4 @@
 devtools::load_all()
-# Bugs. High frequency noise in DT
-# EMD fails on VT. Takes too long
-# EMD fails on AT removing IMF1
 library(data.table)
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
@@ -23,17 +20,11 @@ R1 <- buildTS(
   UN=RAW$SourceUnits,
   Order=2,
   Fmax=15,
-  TrimZeros = TRUE,
   Resample = FALSE,
   LowPass = TRUE,
-  Rebuild = TRUE,
   TargetUnits="mm",
-  removeIMF1.AT = 0,
-  removeIMFn.AT = 0,
-  removeIMF1.VT = 0,
-  removeIMFn.VT = 0,
-  removeIMF1.DT = 0,
-  removeIMFn.DT = 0)
+  removeIMF1 = 0,
+  removeIMFn = 0)
 TSL <- R1$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
@@ -54,24 +45,13 @@ R2 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   UN=RAW$SourceUnits,
+  Order=2,
   Fmax=15,
-  LowPass.AT = TRUE,
-  LowPass.VT = TRUE,
-  LowPass.DT = TRUE,
-  Rebuild = TRUE,
-  Resample = FALSE,
-  TrimZeros = TRUE,
+  Resample = TRUE,
+  LowPass = TRUE,
   TargetUnits="mm",
-  EMD.method="emd",
-  EMD.AT = TRUE,
-  EMD.VT = FALSE,
-  EMD.DT = TRUE,
-  removeIMFn.AT = 0,# 1:
-  removeIMFn.VT = 0,
-  removeIMF1.DT = 1,#
-  removeIMFn.DT = 4, # 1: works
-  NW=1024,
-  OVLP=75)
+  removeIMF1 = 0,
+  removeIMFn = 4)
 TSL <- R2$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]

@@ -26,7 +26,7 @@
   Fs <- 1/dt #
   df <- Fs / NW #
   fs <- seq(from = 0, by = df, length.out = NW / 2)
-  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.99)
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   # Pad Zeros
 
@@ -63,19 +63,15 @@
 }
 
 
-.EMDfilter <- function(X,dt,removeIMF1=0,removeIMFn=0){
+.detrend <- function(X,dt,removeIMF1=0,removeIMFn=0){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if (removeIMF1>0 ||removeIMFn>0) {
-    X <- X[,lapply(.SD,function(x){
-      AUX <- buildIMF(dt=dt,s=x,method="emd",max.imf=15)
-
-      nimf <- AUX$nimf
-      i <- removeIMF1.AT
-      j <- removeIMFn.AT
-      COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-      return(x)
-    })]
+    AUX <- buildIMF(dt=dt,s=X,method="emd",max.imf=15)
+    nimf <- AUX$nimf
+    i <- removeIMF1
+    j <- removeIMFn
+    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+    X <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
   }
   return(X)
 }
@@ -143,7 +139,7 @@
   return(LP * HP)
 }
 
-.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.9995,Lpass=0.995){
+.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.999,Lpass=0.99){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
   iL_stop <- which(cumIA>=Lstop)|> first()#0.995
