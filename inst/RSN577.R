@@ -50,8 +50,8 @@ R2 <- buildTS(
   Resample = FALSE,
   LowPass = TRUE,
   TargetUnits="mm",
-  removeIMF1 = 1,
-  removeIMFn = 2)
+  removeIMF1 = 0,
+  removeIMFn = 4)
 TSL <- R2$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]

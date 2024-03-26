@@ -135,10 +135,7 @@ buildTS <- function(
   DT <- DT[-((NMX):.N)]
   ## REBUILD ----
   Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  # Wo <- DT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-
-  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-  # DT <- DT[idx]
+  DT <- DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
   DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
 

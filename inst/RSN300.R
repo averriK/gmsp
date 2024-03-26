@@ -51,7 +51,7 @@ R2 <- buildTS(
   LowPass = TRUE,
   TargetUnits="mm",
   removeIMF1 = 2,
-  removeIMFn = 3)
+  removeIMFn = 4)
 TSL <- R2$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
