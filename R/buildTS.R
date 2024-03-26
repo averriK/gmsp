@@ -112,7 +112,7 @@ buildTS <- function(
   ## Resample ----
   if(Resample){
     TargetFs <- as.integer(5*Fmax) # 80/200 Hz
-    X <- .resample(X,Fs=Fs,Fmax=Fmax,NW=NW,OVLP=OVLP)
+    X <- .resample(X,dt=dt,TargetFs=TargetFs,Fmax=Fmax,NW=NW,OVLP=OVLP)
     Fs <- TargetFs
     dt <- 1/Fs
   }
@@ -134,15 +134,17 @@ buildTS <- function(
   }
 
   # Trim Zeros
-  Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-  X <- X[idx]
+  # Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+  # X <- X[idx]
 
   # Case #1. Acceleration Time Histories
   if(Order==2){
     AT <- X
-    VT <- AT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
-    DT <- VT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
+    VT <- AT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
+    names(VT) <- OCID
+    DT <- VT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
+    names(DT) <- OCID
   }
 
   # Case #2. Velocity Time Histories

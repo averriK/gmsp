@@ -2,7 +2,7 @@ devtools::load_all()
 # Bugs. High frequency noise in DT
 # EMD fails on VT. Takes too long
 # EMD fails on AT removing IMF1
-
+library(data.table)
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
@@ -24,7 +24,7 @@ R1 <- buildTS(
   Order=2,
   Fmax=15,
   TrimZeros = TRUE,
-  Resample = TRUE,
+  Resample = FALSE,
   LowPass = TRUE,
   Rebuild = FALSE,
   TargetUnits="mm",

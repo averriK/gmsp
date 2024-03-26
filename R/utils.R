@@ -12,14 +12,15 @@
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
-.integrate <- function(dX,dt,Fmax=15,NW=1024,OVLP=75){
+.integrate <- function(dX,dt,Fmax=16,NW=1024,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   OCID <- names(dX)
   Fpass_LP <- Fmax # 20/25 Hz
   Fstop_LP <- 1.2*Fmax # 25/30 Hz
+
   # Flat Zeros
-  Wo <- dX[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  dX <- dX[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+  Wo <- .taperI(dX)
+  dX <- dX*Wo
 
   # Build filter
   Fs <- 1/dt #
@@ -28,15 +29,15 @@
   LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   # Pad Zeros
+
   dX <- .padZeros(dX)
   # Integrate
-  X <- dX[, lapply(.SD, function(x) {
-  .ffilter(x, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-})]
+  # browser()
+  X <- .ffilter(dX, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
   # Flat Zeros
-  Wo <- X[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  X <- X[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-  names(X) <- OCID
+  Wo <- .taperI(X)
+  X <- X*Wo
+
   return(X)
 }
 
@@ -58,11 +59,11 @@
   })]
   X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
   names(X) <- OCID
-return(X)
+  return(X)
 }
 
 
-.EMDfilter <- function(X,t=NULL,dt=NULL,removeIMF1=0,removeIMFn=0){
+.EMDfilter <- function(X,dt,removeIMF1=0,removeIMFn=0){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if (removeIMF1>0 ||removeIMFn>0) {
     X <- X[,lapply(.SD,function(x){
@@ -72,8 +73,8 @@ return(X)
       i <- removeIMF1.AT
       j <- removeIMFn.AT
       COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-      X <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-
+      x <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+      return(x)
     })]
   }
   return(X)
@@ -173,9 +174,10 @@ return(X)
   NB   <- ceiling((NP-NO)/(NW-NO))
   TargetNP  <- NB*(NW-NO)+NO
   NZ <- TargetNP-NP
-
-  O <- data.table(sapply(x, function(x) rep(0, NZ)))
-  x <- rbind(x, O)
+  if(length(NZ)>0){
+    O <- data.table(sapply(x, function(x) rep(0, NZ)))
+    x <- rbind(x, O)
+  }
   return(x)
 
 
@@ -184,12 +186,13 @@ return(X)
 .ffilter <- function (x, f, custom, ovlp=75,wl=1024) {
   on.exit(expr={rm(list = ls())}, add = TRUE)
   NP <- length(x)
+  # browser()
   STEP <- seq(1, NP + 1 - wl, wl - (ovlp * wl/100))
   z <- (seewave::stdft(
     wave = matrix(x,ncol=1), f = f, wl = wl, zp = 0, step = STEP,
     wn = "hanning", fftw = FALSE, complex = TRUE))
   z <- z*custom
-  X <- (seewave::istft(z, wl = wl, ovlp = ovlp, wn = "hanning", output = "matrix",f = f))
+  X <- (seewave::istft(z, wl = wl, ovlp = ovlp, wn = "hanning", output = "matrix",f = f)) |> as.vector()
   return(X)
 }
 
