@@ -12,11 +12,75 @@
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
-
-.derivate <- function(s,t=NULL,dt=NULL){
+.integrate <- function(dX,dt,Fmax=16,NW=1024,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  n <- length(s)
-  vt <- numeric(n)
+  OCID <- names(dX)
+  Fpass_LP <- Fmax # 20/25 Hz
+  Fstop_LP <- 1.2*Fmax # 25/30 Hz
+
+  # Flat Zeros
+  # Wo <- .taperI(dX)
+  # dX <- dX*Wo
+
+  # Build filter
+  Fs <- 1/dt #
+  df <- Fs / NW #
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
+  # Pad Zeros
+
+  dX <- .padZeros(dX)
+  # Integrate
+  # browser()
+  X <- .ffilter(dX, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
+  # Flat Zeros
+  # Wo <- .taperI(X)
+  # X <- X*Wo
+
+  return(X)
+}
+
+.resample <- function(X,dt,TargetFs,Fmax,NW=1024,OVLP=75){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  OCID <- names(X)
+  Fs=1/dt
+
+  Fpass_LP <- Fmax # 20/25 Hz
+  Fstop_LP <- 1.2*Fmax # 25/30 Hz
+  df <- Fs / NW #
+  fs <- seq(from = 0, by = df, length.out = NW / 2)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  X <- X[, lapply(.SD, function(x) {
+    ffilter(wave = x, f = Fs, wl = NW, ovlp = OVLP, custom = LP, rescale = TRUE)
+  })]
+  X <- X[, lapply(.SD, function(x) {
+    signal::resample(x, TargetFs, Fs)
+  })]
+  X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
+  names(X) <- OCID
+  return(X)
+}
+
+
+.detrend <- function(X,dt,removeIMF1=0,removeIMFn=0){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  if (removeIMF1>0 ||removeIMFn>0) {
+    AUX <- buildIMF(dt=dt,s=X,method="emd",max.imf=15)
+    nimf <- AUX$nimf
+    i <- removeIMF1
+    j <- removeIMFn
+    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
+    X <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
+  }
+  return(X)
+}
+
+
+.derivate <- function(X,t=NULL,dt=NULL){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  n <- length(X)
+  dX <- numeric(n)
   stopifnot(n>4)
   if(!is.null(t)){
     dt <- diff(t) |> mean()
@@ -26,16 +90,16 @@
 
   # Four-point central difference for the bulk
   for (i in 3:(n-2)) {
-    vt[i] <- (-s[i+2] + 8*s[i+1] - 8*s[i-1] + s[i-2]) / (12 * dt)
+    dX[i] <- (-X[i+2] + 8*X[i+1] - 8*X[i-1] + X[i-2]) / (12 * dt)
   }
 
   # Three-point differences for the edges
-  vt[1] <- (-3*s[1] + 4*s[2] - s[3]) / (2 * dt)
-  vt[2] <- (-s[4] + 4*s[3] - 3*s[2]) / (2 * dt)
-  vt[n-1] <- (3*s[n-1] - 4*s[n-2] + s[n-3]) / (2 * dt)
-  vt[n] <- (3*s[n] - 4*s[n-1] + s[n-2]) / (2 * dt)
+  dX[1] <- (-3*X[1] + 4*X[2] - X[3]) / (2 * dt)
+  dX[2] <- (-X[4] + 4*X[3] - 3*X[2]) / (2 * dt)
+  dX[n-1] <- (3*X[n-1] - 4*X[n-2] + X[n-3]) / (2 * dt)
+  dX[n] <- (3*X[n] - 4*X[n-1] + X[n-2]) / (2 * dt)
 
-  return(vt)
+  return(dX)
 
 }
 
@@ -50,7 +114,7 @@
 
 }
 
-.taperA <- function(x,Astop=1e-5,Apass=1e-4){
+.taperA <- function(x,Astop=1e-4,Apass=1e-3){
   stopifnot(is.vector(x))
   n <- length(x)
   iH_stop <- which(abs(x) > Astop) |> first()
@@ -75,7 +139,7 @@
   return(LP * HP)
 }
 
-.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.9995,Lpass=0.995){
+.taperI <- function(x,Hstop=0.0005,Hpass=0.005,Lstop=0.999,Lpass=0.99){
   n <- length(x)
   cumIA <- cumsum((x*x)/as.numeric(x %*% x))
   iL_stop <- which(cumIA>=Lstop)|> first()#0.995
@@ -88,49 +152,35 @@
 
 }
 
-.checkRecord <- function(X){
-  return(
-    !is.null(X) &&
-      is.list(X) &&
-      # is.data.table(X$AT) &&
-      # !any(is.na(X$AT)) &&
-      # nrow(X$AT)>0 &&
-      !any(is.na(colnames(X$AT))) &&
-      !is.na(X$dt) &&
-      length(X$dt)>0 &&
-      X$dt>0 &&
-      length(X$Units)>0
-  )
-}
 
-.length <- function(x) {
-  NP <- NULL
-  if(is.data.frame(x)) NP <- nrow(x)
-  if(is.vector(x)) NP <- length(x)
-  if(is.list(x)) NP <- map(x,length) |> unlist()
-  return(x)
-}
 
-.getNZ <- function(NP,OVLP=75,NW=1024){
+
+.padZeros <- function(x,OVLP=75,NW=1024){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  # Overlap Length
+  NP <- nrow(x)
   NO <- OVLP*NW/100
-  NB   <- (NP-NO)/(NW-NO)
-  TargetNP  <- ceiling(NB)*(NW-NO)+NO
+  NB   <- ceiling((NP-NO)/(NW-NO))
+  TargetNP  <- NB*(NW-NO)+NO
   NZ <- TargetNP-NP
+  if(length(NZ)>0){
+    O <- data.table(sapply(x, function(x) rep(0, NZ)))
+    x <- rbind(x, O)
+  }
+  return(x)
 
-  return(NZ)
+
 }
 
 .ffilter <- function (x, f, custom, ovlp=75,wl=1024) {
   on.exit(expr={rm(list = ls())}, add = TRUE)
   NP <- length(x)
+  # browser()
   STEP <- seq(1, NP + 1 - wl, wl - (ovlp * wl/100))
   z <- (seewave::stdft(
     wave = matrix(x,ncol=1), f = f, wl = wl, zp = 0, step = STEP,
     wn = "hanning", fftw = FALSE, complex = TRUE))
   z <- z*custom
-  X <- (seewave::istft(z, wl = wl, ovlp = ovlp, wn = "hanning", output = "matrix",f = f))
+  X <- (seewave::istft(z, wl = wl, ovlp = ovlp, wn = "hanning", output = "matrix",f = f)) |> as.vector()
   return(X)
 }
 

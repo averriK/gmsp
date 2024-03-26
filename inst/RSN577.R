@@ -5,7 +5,7 @@ if(!exists("SET")){
   SET <- readRDS(file.path(RecordsFolder,"AT2.Rds"))
 }
 
-RSN_TARGET <- 300  #577 300 1500 1540
+RSN_TARGET <- 1540  #577 300 1500 1540
 OCID_TARGET <- "UP"
 
 # RSN 300. VT has a low frequency noise
@@ -20,7 +20,7 @@ R1 <- buildTS(
   UN=RAW$SourceUnits,
   Order=2,
   Fmax=15,
-  Resample = TRUE,
+  Resample = FALSE,
   LowPass = TRUE,
   TargetUnits="mm",
   removeIMF1 = 0,
@@ -50,7 +50,7 @@ R2 <- buildTS(
   Resample = FALSE,
   LowPass = TRUE,
   TargetUnits="mm",
-  removeIMF1 = 2,
+  removeIMF1 = 0,
   removeIMFn = 4)
 TSL <- R2$TSL
 
@@ -63,5 +63,4 @@ xplot::plot.highchart(
   legend.show=TRUE,
   xAxis.legend="t",
   data=DATA)
-
 # VT records takes too long... it seems that it takes too long to remove the 1st IMF
