@@ -19,14 +19,14 @@
   Fstop_LP <- 1.2*Fmax # 25/30 Hz
 
   # Flat Zeros
-  Wo <- .taperI(dX)
-  dX <- dX*Wo
+  # Wo <- .taperI(dX)
+  # dX <- dX*Wo
 
   # Build filter
   Fs <- 1/dt #
   df <- Fs / NW #
   fs <- seq(from = 0, by = df, length.out = NW / 2)
-  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.99)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   # Pad Zeros
 
@@ -35,8 +35,8 @@
   # browser()
   X <- .ffilter(dX, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
   # Flat Zeros
-  Wo <- .taperI(X)
-  X <- X*Wo
+  # Wo <- .taperI(X)
+  # X <- X*Wo
 
   return(X)
 }
@@ -114,7 +114,7 @@
 
 }
 
-.taperA <- function(x,Astop=1e-5,Apass=1e-4){
+.taperA <- function(x,Astop=1e-4,Apass=1e-3){
   stopifnot(is.vector(x))
   n <- length(x)
   iH_stop <- which(abs(x) > Astop) |> first()
@@ -153,15 +153,7 @@
 }
 
 
-.getNZ <- function(NP,OVLP=75,NW=1024){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  # Overlap Length
-  NO <- OVLP*NW/100
-  NB   <- ceiling((NP-NO)/(NW-NO))
-  TargetNP  <- NB*(NW-NO)+NO
-  NZ <- TargetNP-NP
-  return(NZ)
-}
+
 
 .padZeros <- function(x,OVLP=75,NW=1024){
   on.exit(expr={rm(list = ls())}, add = TRUE)

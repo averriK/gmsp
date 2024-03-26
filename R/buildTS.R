@@ -129,9 +129,19 @@ buildTS <- function(
 
 
   }
-
+  NMX <- min(nrow(AT),nrow(VT), nrow(DT))
+  AT <- AT[-((NMX):.N)]
+  VT <- VT[-((NMX):.N)]
+  DT <- DT[-((NMX):.N)]
   ## REBUILD ----
+  Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  # Wo <- DT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+
+  # idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+  # DT <- DT[idx]
   DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
   ## Derivate DT ----
   VT <- DT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
   VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
@@ -144,7 +154,8 @@ buildTS <- function(
   VT <- VT[-((NMX):.N)]
   DT <- DT[-((NMX):.N)]
   # # .taperI muy restrictivo para aceleraciones
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=1e-4,Apass=1e-3)}))]
+  # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
+  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=1e-5,Apass=1e-4)}))]
   idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
   AT <- AT[idx]
   VT <- VT[idx]
