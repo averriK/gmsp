@@ -8,16 +8,19 @@ buildTS(
   x,
   ts = NULL,
   dt = NULL,
-  UN,
-  Order = 2,
+  Units,
+  OrderTS = 2,
+  OrderEMD = 2,
   Fmax = 16,
   Resample = TRUE,
-  LowPass = FALSE,
+  LowPass = TRUE,
   removeIMF1 = 0,
   removeIMFn = 0,
   TargetUnits = "mm",
   NW = 1024,
-  OVLP = 75
+  OVLP = 75,
+  Astop.AT = 1e-04,
+  Apass.AT = 0.001
 )
 }
 \arguments{
@@ -27,9 +30,11 @@ buildTS(
 
 \item{dt}{numeric}
 
-\item{UN}{character}
+\item{Units}{character}
 
-\item{Order}{integer}
+\item{OrderTS}{integer}
+
+\item{OrderEMD}{integer}
 
 \item{Fmax}{integer}
 
@@ -46,6 +51,10 @@ buildTS(
 \item{NW}{integer Windows Length}
 
 \item{OVLP}{integer}
+
+\item{Astop.AT}{numeric}
+
+\item{Apass.AT}{numeric}
 }
 \value{
 list

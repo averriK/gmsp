@@ -1,4 +1,3 @@
-devtools::load_all()
 library(data.table)
 if(!exists("SET")){
   RecordsFolder <- file.path("/Users/averri/Database/gmdb/source/tables")
@@ -13,19 +12,20 @@ RAW <- SET[[RSN_TARGET]] #577 300 1500
 
 # -----
 # Stage 1/ Raw record
-
+devtools::load_all()
 R1 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
-  UN=RAW$SourceUnits,
-  Order=2,
-  Fmax=15,
+  Units=RAW$SourceUnits,
+  OrderTS=2,
+  Fmax=16,
   Resample = TRUE,
   LowPass = TRUE,
   TargetUnits="mm",
   removeIMF1 = 0,
   removeIMFn = 0)
 TSL <- R1$TSL
+TSW <- R1$TSW
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
 xplot::plot.highchart(
@@ -36,6 +36,23 @@ xplot::plot.highchart(
   legend.show=TRUE,
   xAxis.legend="t",
   data=DATA)
+
+DATA <- data.table(
+  X=TSW$ts,
+  Y=TSW$AT.UP,
+  ID="AT.UP")
+
+
+
+xplot::plot.highchart(
+  color.palette ="Dynamic",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  xAxis.legend="t",
+  data=DATA)
+
 
 # -----
 # Stage 2/ Remove Residues and 1 IMF (low freq) from AT
@@ -44,24 +61,25 @@ devtools::load_all()
 R2 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,
-  UN=RAW$SourceUnits,
-  Order=2,
-  Fmax=15,
-  Resample = FALSE,
+  Units=RAW$SourceUnits,
+  OrderTS=2,
+  OrderEMD=2,
+  Resample = TRUE,
   LowPass = TRUE,
   TargetUnits="mm",
-  removeIMF1 = 2,
-  removeIMFn = 4)
+  removeIMF1 = 0,
+  removeIMFn = 0)
 TSL <- R2$TSL
 
 DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
 xplot::plot.highchart(
   color.palette ="Dynamic",
+  line.size = 0.5,
   yAxis.label =TRUE,
   plot.type="line",
   legend.layout="horizontal",
   legend.show=TRUE,
+  yAxis.legend="s(t)",
   xAxis.legend="t",
-  data=DATA)
-
-# VT records takes too long... it seems that it takes too long to remove the 1st IMF
+  data=DATA#[ID=="AT"])
+)

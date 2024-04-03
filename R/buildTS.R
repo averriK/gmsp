@@ -3,8 +3,9 @@
 #' @param x data.table
 #' @param dt numeric
 #' @param ts numeric
-#' @param Order integer
-#' @param UN character
+#' @param OrderTS integer
+#' @param OrderEMD integer
+#' @param Units character
 #' @param Fmax integer
 #' @param Resample boolean
 #' @param LowPass boolean
@@ -13,6 +14,8 @@
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
+#' @param Astop.AT numeric
+#' @param Apass.AT numeric
 
 #'
 #' @return list
@@ -34,18 +37,20 @@
 #'
 #'
 buildTS <- function(
-    x, ts=NULL ,dt=NULL, UN,
-    Order=2,
+    x, ts=NULL ,dt=NULL, Units,
+    OrderTS=2, #0 Displacement, 1 Velocity, 2 Acceleration
+    OrderEMD=2, #0 Displacement, 1 Velocity, 2 Acceleration
     Fmax = 16,
     Resample = TRUE,
-    LowPass = FALSE,
+    LowPass = TRUE,
     removeIMF1 = 0,
     removeIMFn = 0,
     TargetUnits = "mm",
     NW = 1024,
-    OVLP = 75) {
+    OVLP = 75,
+    Astop.AT=1e-4,
+    Apass.AT=1e-3) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
-
   . <- NULL
   X <- copy(x) |> as.data.table()
 
@@ -59,13 +64,13 @@ buildTS <- function(
 
   ## Scale Units  ----
 
-  if (grepl(UN, pattern = "[///+]")) {
-    UN <- (str_split(UN, pattern = "[///+]") |> unlist())[1]
+  if (grepl(Units, pattern = "[///+]")) {
+    Units <- (str_split(Units, pattern = "[///+]") |> unlist())[1]
   }
-  if (!(tolower(UN) %in% c("mm", "cm", "m", "gal", "g"))) return(NULL)
+  if (!(tolower(Units) %in% c("mm", "cm", "m", "gal", "g"))) return(NULL)
 
-  if (tolower(UN) != TargetUnits) {
-    SFU <- .getSF(SourceUnits = tolower(UN), TargetUnits = TargetUnits)
+  if (tolower(Units) != TargetUnits) {
+    SFU <- .getSF(SourceUnits = tolower(Units), TargetUnits = TargetUnits)
     # AT <- map(AT,function(x){x*SFU})
     # ATo[, (colnames(ATo)) := lapply(.SD, function(x) {x * SFU})]
     X <- X[,.(sapply(.SD, function(x) {x * SFU}))]
@@ -94,50 +99,79 @@ buildTS <- function(
     Fs <- TargetFs
     dt <- 1/Fs
   }
-
-
-  # Case #2. Acceleration Time Histories
-  if(Order==2){
+  # browser()
+  ## Case #2. Acceleration Time Histories ----
+  if(OrderTS==2){
+    Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=Astop.AT,Apass=Apass.AT)}))]
     AT <- X
-    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+    if(2 %in% OrderEMD){
+      AT <-AT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    } else {
+      AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]}
     names(AT) <- OCID
+    # browser()
+    VT <- AT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
 
-    VT <- AT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
-    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    if(nrow(VT) > nrow(Wo)){
+      O <- data.table(sapply(Wo, function(x) rep(0, nrow(VT)-nrow(Wo))))
+      Wo <- rbind(Wo, O)
+    }
+    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+    if(1 %in% OrderEMD){
+      VT <-VT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    } else {
+      VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]}
     names(VT) <- OCID
 
-    DT <- VT[, lapply(.SD, function(x){ .integrate(dX=x,dt=dt) })]
-    # DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    DT <- VT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
+
+    if(nrow(DT) > nrow(Wo)){
+      O <- data.table(sapply(Wo, function(x) rep(0, nrow(DT)-nrow(Wo))))
+      Wo <- rbind(Wo, O)
+    }
+    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+    if(0 %in% OrderEMD){
+      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    } else {
+      DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]}
+
+
     names(DT) <- OCID
   }
 
-  # Case #1. Velocity Time Histories
-  if(Order==1){
+  # Case #1. Velocity Time Histories ----
+  if(OrderTS==1){
     VT <- X
-    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    if(1 %in% OrderEMD){
+      VT <-VT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    } else {
+      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]}
 
-    DT <- VT[, lapply(.SD, function(x){.integrate(dX=x,dt=dt) })]
-    # DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+    DT <- VT[, lapply(.SD, function(x){.integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
+
+    if(0 %in% OrderEMD){
+      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    } else {
+      DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]}
+
     names(DT) <- OCID
 
 
   }
 
   # Case #0. Displacement Time Historyes
-  if(Order==0){
+  if(OrderTS==0){
     DT <- X
+    if(0 %in% OrderEMD){
+      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    }
 
 
   }
-  NMX <- min(nrow(AT),nrow(VT), nrow(DT))
-  AT <- AT[-((NMX):.N)]
-  VT <- VT[-((NMX):.N)]
-  DT <- DT[-((NMX):.N)]
-  ## REBUILD ----
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  DT <- DT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
 
   ## Derivate DT ----
   VT <- DT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
@@ -146,20 +180,24 @@ buildTS <- function(
   ## Derivate VT ----
   AT <-  VT[, lapply(.SD, function(x){.derivate(X=x,dt=dt) })]
   AT <- AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  NMX <- min(nrow(AT), nrow(DT))
-  AT <- AT[-((NMX):.N)]
-  VT <- VT[-((NMX):.N)]
-  DT <- DT[-((NMX):.N)]
-  # # .taperI muy restrictivo para aceleraciones
+
+    ## Taper Zeros ----
   # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=1e-5,Apass=1e-4)}))]
+  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=Astop.AT,Apass=Apass.AT)}))]
+  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
+
+
+  # Trim Zeros
   idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
   AT <- AT[idx]
   VT <- VT[idx]
   DT <- DT[idx]
-  # AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  # VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
-  # DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # Fix trend
+  AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
 
 
   ## Restore Scale ----
@@ -189,5 +227,5 @@ buildTS <- function(
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  return(list(TSL=TSL,TSW=TSW,Wo=Wo,Ao=Ao,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = UN))
+  return(list(TSL=TSL,TSW=TSW,Wo=Wo,Ao=Ao,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = Units))
 }

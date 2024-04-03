@@ -12,9 +12,9 @@
 #' @importFrom xplot plot.highchart
 #' @noRd
 #'
-.integrate <- function(dX,dt,Fmax=16,NW=1024,OVLP=75){
+.integrate <- function(dx,dt,Fmax=16,NW=1024,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  OCID <- names(dX)
+  OCID <- names(dx)
   Fpass_LP <- Fmax # 20/25 Hz
   Fstop_LP <- 1.2*Fmax # 25/30 Hz
 
@@ -26,23 +26,20 @@
   Fs <- 1/dt #
   df <- Fs / NW #
   fs <- seq(from = 0, by = df, length.out = NW / 2)
-  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.001, Apass = 0.95)
+  LP <- .buildLowPassButtterworth(f = fs, Fstop = round(1 * Fstop_LP / df) * df, Fpass = round(1 * Fpass_LP / df) * df, Astop = 0.01, Apass = 0.95)
   HI <- .buildIntegrateFilter(f = fs) ## Integrate Filter
   # Pad Zeros
-
-  dX <- .padZeros(dX)
+  dX <- .padZeros(dx,NW=NW,OVLP=OVLP)
   # Integrate
-  # browser()
+
   X <- .ffilter(dX, f = Fs, wl = NW, ovlp = OVLP, custom = HI) * NW
-  # Flat Zeros
-  # Wo <- .taperI(X)
-  # X <- X*Wo
 
   return(X)
 }
 
 .resample <- function(X,dt,TargetFs,Fmax,NW=1024,OVLP=75){
   on.exit(expr={rm(list = ls())}, add = TRUE)
+  . <- NULL
   OCID <- names(X)
   Fs=1/dt
 
@@ -134,8 +131,8 @@
   iL_pass <- min(iL_pass, iL_stop-1L)
   stopifnot( iL_pass < iL_stop)
 
-  HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.001, Apass = 0.999)
-  LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.001, Apass = 0.999)
+  HP <- .buildHighPassButtterworth(f = seq(1, n), Fpass = iH_pass, Fstop = iH_stop, Astop = 0.01, Apass = 0.95)
+  LP <- .buildLowPassButtterworth(f = seq(1, n), Fstop = iL_stop, Fpass = iL_pass, Astop = 0.01, Apass = 0.95)
   return(LP * HP)
 }
 
@@ -155,16 +152,25 @@
 
 
 
-.padZeros <- function(x,OVLP=75,NW=1024){
+.padZeros <- function(x,nz=0,OVLP=75,NW=1024){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  NP <- nrow(x)
+ if(is.data.table(x)){
+   NP <- nrow(x)}
+  if(is.vector(x)){
+     NP <- length(x)}
+
   NO <- OVLP*NW/100
   NB   <- ceiling((NP-NO)/(NW-NO))
   TargetNP  <- NB*(NW-NO)+NO
-  NZ <- TargetNP-NP
-  if(length(NZ)>0){
+  NZ <- max(nz,TargetNP-NP)
+  if(is.data.table(x) & length(NZ)>0){
     O <- data.table(sapply(x, function(x) rep(0, NZ)))
     x <- rbind(x, O)
+  }
+
+  if(is.vector(x) & length(NZ)>0){
+    O <- rep(0, NZ)
+    x <- c(x, O)
   }
   return(x)
 
