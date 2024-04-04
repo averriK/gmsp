@@ -12,6 +12,7 @@
 #' @param trials integer
 #' @param stop.rule string
 #' @param plot boolean
+#' @param verbose boolean
 #'
 #' @importFrom data.table :=
 #' @importFrom stats na.omit
@@ -28,7 +29,7 @@
 #'
 #' @examples
 #'
-buildIMF <- function(s,t=NULL,dt=NULL,method="emd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE){
+buildIMF <- function(s,t=NULL,dt=NULL,method="emd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE,verbose=FALSE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 stopifnot(!is.null(s) && tolower(method) %in% c("emd","eemd","ceemd") && tolower(stop.rule) %in% c("type1","type2","type3","type4","type5") && tolower(boundary) %in% c("none","wave","symmetric","periodic","evenodd") && noise.type %in% c("uniform","gaussian") )
 
@@ -54,7 +55,7 @@ stopifnot(!is.null(s) && tolower(method) %in% c("emd","eemd","ceemd") && tolower
     AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf,stoprule=stop.rule)
     nimf <- AUX$nimf
     DIR <- tempdir(check = TRUE)
-   hht::EEMD(sig=DT$s, tt=DT$t,nimf=nimf,max.imf=max.imf,boundary=boundary,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule,trials.dir = DIR,verbose=FALSE)
+   hht::EEMD(sig=DT$s, tt=DT$t,nimf=nimf,max.imf=max.imf,boundary=boundary,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule,trials.dir = DIR,verbose=verbose)
    AUX <- EEMDCompile(trials.dir = DIR, trials=trials, nimf=nimf) |> suppressWarnings()
    unlink(DIR,force = TRUE,recursive = TRUE)
    IMF <- AUX$averaged.imfs |> as.data.table()
@@ -64,7 +65,7 @@ stopifnot(!is.null(s) && tolower(method) %in% c("emd","eemd","ceemd") && tolower
   }
 
   if(tolower(method)=="ceemd"){
-    AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule,verbose=FALSE)
+    AUX <- hht::CEEMD(sig=DT$s, tt=DT$t,noise.amp=noise.amp, noise.type=noise.type,trials=trials,stop.rule=stop.rule,verbose=verbose)
     IMF <- AUX$imf |> as.data.table()
     names(IMF) <- paste0("IMF", seq_len(ncol(IMF)))
     RES <- AUX$residue|> as.vector() |> unname()

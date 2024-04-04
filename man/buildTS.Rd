@@ -12,6 +12,7 @@ buildTS(
   OrderTS = 2,
   OrderEMD = 2,
   Fmax = 16,
+  kNyq = 2.5,
   Resample = TRUE,
   LowPass = TRUE,
   removeIMF1 = 0,
@@ -37,6 +38,8 @@ buildTS(
 \item{OrderEMD}{integer}
 
 \item{Fmax}{integer}
+
+\item{kNyq}{numeric}
 
 \item{Resample}{boolean}
 

@@ -7,6 +7,7 @@
 #' @param OrderEMD integer
 #' @param Units character
 #' @param Fmax integer
+#' @param kNyq numeric
 #' @param Resample boolean
 #' @param LowPass boolean
 #' @param removeIMF1 boolean
@@ -41,6 +42,7 @@ buildTS <- function(
     OrderTS=2, #0 Displacement, 1 Velocity, 2 Acceleration
     OrderEMD=2, #0 Displacement, 1 Velocity, 2 Acceleration
     Fmax = 16,
+    kNyq=3.125, #>2.5
     Resample = TRUE,
     LowPass = TRUE,
     removeIMF1 = 0,
@@ -94,7 +96,7 @@ buildTS <- function(
 
   ## Resample ----
   if(Resample){
-    TargetFs <- as.integer(5*Fmax) # 80/200 Hz
+    TargetFs <- as.integer(max(2.5,kNyq)*Fmax) # 80/200 Hz
     X <- .resample(X,dt=dt,TargetFs=TargetFs,Fmax=Fmax,NW=NW,OVLP=OVLP)
     Fs <- TargetFs
     dt <- 1/Fs

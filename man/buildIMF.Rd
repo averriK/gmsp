@@ -15,7 +15,8 @@ buildIMF(
   noise.amp = 5e-08,
   trials = 10,
   stop.rule = "type5",
-  plot = TRUE
+  plot = TRUE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -40,6 +41,8 @@ buildIMF(
 \item{stop.rule}{string}
 
 \item{plot}{boolean}
+
+\item{verbose}{boolean}
 }
 \value{
 list
