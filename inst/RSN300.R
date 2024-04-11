@@ -24,11 +24,12 @@ R1 <- buildTS(
   LowPass = TRUE,
   TargetUnits="mm",
   removeIMF1 = 0,
-  removeIMFn = 0)
+  removeIMFn = 0,
+  Scale = "relative")
 TSL <- R1$TSL
 TSW <- R1$TSW
 
-DATA <- TSL[OCID==OCID_TARGET,.(X=t,Y=s,ID=ID)]
+DATA <- TSL[OCID=="H1",.(X=t,Y=s,ID=ID)]
 xplot::plot.highchart(
   color.palette ="Dynamic",
   yAxis.label =TRUE,

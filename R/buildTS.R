@@ -17,6 +17,7 @@
 #' @param OVLP integer
 #' @param Astop.AT numeric
 #' @param Apass.AT numeric
+#' @param Scale character
 
 #'
 #' @return list
@@ -51,7 +52,8 @@ buildTS <- function(
     NW = 1024,
     OVLP = 75,
     Astop.AT=1e-4,
-    Apass.AT=1e-3) {
+    Apass.AT=1e-3,
+    Scale = "relative") {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
   . <- NULL
   X <- copy(x) |> as.data.table()
@@ -84,9 +86,16 @@ buildTS <- function(
 
 
   ## Set Scale Reference ----
-  Ao <- apply(X, 2, function(x) { max(abs(x))})
+
   ## Scale record ----
-  X <-X[, .(sapply(.SD, function(x){x/max(abs(x))}))]
+  if(tolower(Scale)=="relative"){
+    Ao <- apply(X, 2, function(x) { max(abs(x))})
+    X <-X[, .(sapply(.SD, function(x){x/max(abs(x))}))]
+  }
+  if(tolower(Scale)=="absolute"){
+    Ao <- max(abs(X))
+    X <-X[, .(sapply(.SD, function(x){x/Ao}))]
+  }
   # Detrend
   X <-X[, .(sapply(.SD, function(x){x-mean(x)}))]
 
@@ -203,10 +212,16 @@ buildTS <- function(
 
 
   ## Restore Scale ----
-
-  AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
-  VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
-  DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
+  if(tolower(Scale)=="relative"){
+    AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
+    VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
+    DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
+  }
+  if(tolower(Scale)=="absolute"){
+    AT <- AT[, lapply(.SD, function(x) {x * Ao})]
+    VT <- VT[, lapply(.SD, function(x) {x * Ao})]
+    DT <- DT[, lapply(.SD, function(x) {x * Ao})]
+  }
   names(AT) <- OCID
   names(VT) <- OCID
   names(DT) <- OCID
