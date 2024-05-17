@@ -8,7 +8,7 @@
 #' @param cv boolean
 #' @param sigma numeric
 #'
-#' @return data.table
+#' @return list
 #' @export smoothSpectra
 #'
 #' @import data.table
@@ -55,5 +55,5 @@ smoothSpectra <- function(fs,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
 
   # Ensure the smoothed amplitude spectrum has the same length as the frequency vector
   As <- c(As, rep(0, length(fs) - length(As)))
-  DT <- data.table(As=As, fs=fs)
+  DT <- list(As=As, fs=fs)
 }
