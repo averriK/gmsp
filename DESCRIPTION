@@ -14,13 +14,17 @@ Imports:
     pracma,
     seewave,
     signal,
+    zoo,
+    stats,
     stringr,
     purrr,
     digest,
     spectral,
     hht,
     EMD,
-    xplot
+    xplot,
+    MASS,
+    expm
 Depends: 
     R (>= 3.5)
 LazyData: true

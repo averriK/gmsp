@@ -12,7 +12,7 @@ buildTS(
   OrderTS = 2,
   OrderEMD = 2,
   Fmax = 16,
-  kNyq = 2.5,
+  kNyq = 3.125,
   Resample = TRUE,
   LowPass = TRUE,
   removeIMF1 = 0,
@@ -21,7 +21,8 @@ buildTS(
   NW = 1024,
   OVLP = 75,
   Astop.AT = 1e-04,
-  Apass.AT = 0.001
+  Apass.AT = 0.001,
+  Scale = "relative"
 )
 }
 \arguments{
@@ -58,6 +59,8 @@ buildTS(
 \item{Astop.AT}{numeric}
 
 \item{Apass.AT}{numeric}
+
+\item{Scale}{character}
 }
 \value{
 list
