@@ -4,7 +4,14 @@
 \alias{getIM}
 \title{Title}
 \usage{
-getIM(a = NULL, v = NULL, d = NULL, dt = NULL, UN = NULL, TargetUnits = "mm")
+getIM(
+  a = NULL,
+  v = NULL,
+  d = NULL,
+  dt = NULL,
+  Units = NULL,
+  TargetUnits = "mm"
+)
 }
 \arguments{
 \item{a}{data.table Time Series of acceleration records}
@@ -15,7 +22,7 @@ getIM(a = NULL, v = NULL, d = NULL, dt = NULL, UN = NULL, TargetUnits = "mm")
 
 \item{dt}{numeric Time step}
 
-\item{UN}{character Units of source records}
+\item{Units}{character Units of source records}
 
 \item{TargetUnits}{character Units of target records}
 }

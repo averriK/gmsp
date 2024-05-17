@@ -5,7 +5,7 @@
 #' @param v data.table Time Series of velocity records
 #' @param d data.table Time Series of displacement records
 #' @param dt numeric Time step
-#' @param UN character Units of source records
+#' @param Units character Units of source records
 #' @param TargetUnits character Units of target records
 #'
 #' @return data.table
@@ -21,10 +21,10 @@
 #' @importFrom stringr str_split
 #' @importFrom purrr map
 
-getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
+getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,Units=NULL,TargetUnits="mm"){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   # Check internal  -------------------------------------------------------------
-  OK <- !is.null(a) && !is.null(dt) && !is.null(UN)
+  OK <- !is.null(a) && !is.null(dt) && !is.null(Units)
   stopifnot(OK)
   AT <- copy(a)
   VT <- copy(v)
@@ -53,10 +53,10 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
 
   IM[,OCID:=OCID]
 
-  if(grepl(UN,pattern = "[///+]")){
-    UN <- (str_split(UN, pattern = "[///+]") |> unlist())[1]
+  if(grepl(Units,pattern = "[///+]")){
+    Units <- (str_split(Units, pattern = "[///+]") |> unlist())[1]
   }
-  if(!(tolower(UN) %in% c("mm","cm","m","gal","g"))){
+  if(!(tolower(Units) %in% c("mm","cm","m","gal","g"))){
     # Invalid Units
     return(NULL)
   }
@@ -66,13 +66,13 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
   Fs=1/dt
   # Scale Records -------------------------------------------------------------
   g <- .getG(TargetUnits) #GMSP$g
-  if(UN!=TargetUnits) {
-    SFU <- .getSF(UN,TargetUnits = TargetUnits)
+  if(Units!=TargetUnits) {
+    SFU <- .getSF(Units,TargetUnits = TargetUnits)
     AT[, (OCID) := lapply(.SD, function(x){SFU*x}), .SDcols=OCID]
-    IM[,UN:=TargetUnits]
+    IM[,Units:=TargetUnits]
   } else {
     SFU <- 1
-    IM[,UN:=UN]
+    IM[,Units:=Units]
   }
   IM[,SFU:=SFU]
   IM[,Scaled:=FALSE]
@@ -93,7 +93,7 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,UN=NULL,TargetUnits="mm"){
   IM[,PGA :=AT[, sapply(.SD, function(x){max(abs(x))})]] #  Peak values
   IM[,AZC := AT[, sapply(.SD,   .getZC)]]
   IM[,ARMS := AT[, sapply(.SD,  .getRMS)]]
-  IM[,CAV5 := AT[, sapply(.SD,  function(x){.getCAV5(x,tn=tn,UN=TargetUnits)})]]
+  IM[,CAV5 := AT[, sapply(.SD,  function(x){.getCAV5(x,tn=tn,Units=TargetUnits)})]]
   IM[,TmA :=  AT[, sapply(.SD, function(x){.getTm(X=x,Fs=Fs,fmin=0.25,fmax=15)})]]
   IM[,CRC32 := AT[, sapply(.SD, .getCRC)]]
   IM[,ATo :=AT[, sapply(.SD, function(x){first(x)})]] #  Initial values

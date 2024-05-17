@@ -9,7 +9,7 @@
 #' @importFrom spectral spec.fft
 #' @importFrom EMD emd
 #' @importFrom hht CEEMD
-#' @importFrom xplot plot.highchart
+#' @import xplot
 #' @noRd
 #'
 .integrate <- function(dx,dt,Fmax=16,NW=1024,OVLP=75){
@@ -267,12 +267,12 @@
 .getRMS <- function(x){
   sqrt(1/length(x)*as.numeric(x%*%x))}
 
-.getCAV5 <- function(a,tn,UN="mm"){
+.getCAV5 <- function(a,tn,Units="mm"){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  AT=a
+  AT <- copy(a)
   dt <- tn[2]-tn[1]
   # a5=5.099/1000*g
-  a5 <- switch(tolower(UN),"mm"= 50,"cm"=50/10,"m"=50/1000,NULL)
+  a5 <- switch(tolower(Units),"mm"= 50,"cm"=50/10,"m"=50/1000,NULL)
   AT <- abs(AT)
   AT[AT < a5] <- 0
   idx <-  2:length(AT)

@@ -10,9 +10,22 @@ OCID_TARGET <- "UP"
 # RSN 300. VT has a low frequency noise
 RAW <- SET[[RSN_TARGET]] #577 300 1500
 
+
+AT <- RAW$AT$H1
+AUX <- buildPSA(a=AT,Units=RAW$SourceUnits,dt=RAW$dt)
+DATA <- data.table(X=AUX$Tn,Y=AUX$PSA,ID="*")
+xplot::plot.highchart(
+  color.palette ="Dynamic",
+  yAxis.label =TRUE,
+  plot.type="line",
+  legend.layout="horizontal",
+  legend.show=TRUE,
+  xAxis.legend="t",
+  data=DATA)
 # -----
 # Stage 1/ Raw record
 devtools::load_all()
+
 R1 <- buildTS(
   x=RAW$AT,
   dt=RAW$dt,

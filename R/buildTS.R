@@ -25,11 +25,8 @@
 #'
 #' @examples
 #'
-#' @importFrom data.table :=
+#' @import data.table
 #' @importFrom stats na.omit
-#' @importFrom data.table data.table
-#' @importFrom data.table is.data.table
-#' @importFrom data.table melt
 #' @importFrom seewave stdft
 #' @importFrom seewave istft
 #' @importFrom seewave ffilter
