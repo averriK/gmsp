@@ -30,7 +30,7 @@ smoothSpectra(
 \item{sigma}{numeric}
 }
 \value{
-data.table
+list
 }
 \description{
 Title
