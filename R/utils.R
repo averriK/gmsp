@@ -9,7 +9,6 @@
 #' @importFrom spectral spec.fft
 #' @importFrom EMD emd
 #' @importFrom hht CEEMD
-#' @import xplot
 #' @noRd
 #'
 .integrate <- function(dx,dt,Fmax=16,NW=1024,OVLP=75){
