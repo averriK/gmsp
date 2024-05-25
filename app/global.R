@@ -1,0 +1,45 @@
+
+source("setup.R",local = TRUE)
+source("R/utils.R",local = TRUE)
+source("R/TS.R",local = TRUE)
+source("R/FFT.R",local = TRUE)
+source("R/SDOF.R",local = TRUE)
+source("R/STFT.R",local = TRUE)
+source("R/WTC.R",local = TRUE)
+source("R/EMD.R",local = TRUE)
+
+message("Reading AT2 data")
+DATASET <- readRDS(file.path("data/AT2.Rds"))
+
+UNITS <- "mm"
+RSN <- 4000 
+RAW <- DATASET[[RSN]]
+FMAX <- 25
+RESAMPLE <- FALSE
+LOWPASS <- TRUE
+IMF1 <- 0
+IMFN <-0
+message("Building TimeSeries")
+
+AUX <- buildTS(
+  x=RAW$AT,
+  dt=RAW$dt,
+  Units=RAW$SourceUnits,
+  OrderTS =2,
+  OrderEMD = NULL,
+  Fmax=FMAX,
+  Resample = RESAMPLE,
+  LowPass = LOWPASS,
+  TargetUnits=UNITS,
+  Astop.AT=1e-4,
+  Apass.AT=5e-4,
+  removeIMF1 = IMF1,
+  removeIMFn = IMFN)
+
+TSL <- AUX$TSL[ OCID  %in%  c("H1","H2","UP")]
+rm(AUX)
+
+
+# DELETE
+# DT <- TSL[ID=="AT" & OCID=="H1"]
+# FFT <- .getFFT(.x=DT)

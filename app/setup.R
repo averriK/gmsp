@@ -1,0 +1,22 @@
+library(shiny)
+# library(shinyWidgets)
+library(shinydashboard)
+library(markdown)
+library(data.table)
+
+# library(shinyjs)
+library(htmltools)
+library(readxl)
+library(highcharter)
+
+# library(shinycustomloader)
+library(biwavelet)
+library(seewave)
+library(tuneR)
+library(spectral)
+library(hht)
+library(stringr)
+library(grDevices) #hcl.colors()
+library(signal)  # For smoothing functions
+library(buildPlot)
+library(gmsp)
