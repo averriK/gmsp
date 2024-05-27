@@ -11,7 +11,7 @@ server <- function(input, output, session) {
   FFT.server(id="FFT",.data=TSL,series="DT")
   
   
-  PSA.server(id="PSA",.data=TSL)
+  PSA.server(id="STFT",.data=TSL)
   
   STFT.server(id="STFT",.data=TSL,series="AT")
   STFT.server(id="STFT",.data=TSL,series="VT")
