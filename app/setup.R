@@ -1,13 +1,13 @@
 library(shiny)
-# library(shinyWidgets)
+library(shinyWidgets)
 library(shinydashboard)
 library(markdown)
 library(data.table)
 
-# library(shinyjs)
+library(shinyjs)
 library(htmltools)
 library(readxl)
-# library(highcharter)
+library(highcharter)
 
 # library(shinycustomloader)
 library(biwavelet)

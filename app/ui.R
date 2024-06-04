@@ -55,7 +55,32 @@ ui <- dashboardPage(
       menuItem("WTC", tabName = "wtc"),
       menuItem("SDOF", tabName = "sdof"),
       menuItem("EMD", tabName = "emd")
+    ), # sidebarMenu
+    conditionalPanel(
+      condition = "input.sidebarItem == 'ts'",
+      TS.sidebar("TS")  # Show TS.sidebar only if TS is selected
+    ),
+    conditionalPanel(
+      condition = "input.sidebarItem == 'fft'",
+      FFT.sidebar("FFT")  # Show FFT.sidebar only if FFT is selected
+    ),
+    conditionalPanel(
+      condition = "input.sidebarItem == 'stft'",
+      STFT.sidebar("STFT")  # Show STFT.sidebar only if STFT is selected
+    ),
+    conditionalPanel(
+      condition = "input.sidebarItem == 'wtc'",
+      WTC.sidebar("WTC")  # Show WTC.sidebar only if WTC is selected
+    ),
+    conditionalPanel(
+      condition = "input.sidebarItem == 'sdof'",
+      SDOF.sidebar("SDOF")  # Show SDOF.sidebar only if SDOF is selected
+    ),
+    conditionalPanel(
+      condition = "input.sidebarItem == 'emd'",
+      EMD.sidebar("EMD")  # Show EMD.sidebar only if EMD is selected
     )
+    
   ),
   
   body = dashboardBody(
