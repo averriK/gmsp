@@ -1,4 +1,4 @@
-EMD.sidebarPanel <- function(id){
+EMD.sidebar <- function(id){
   ns=NS(id)
   tagList(
     helpText("Max number of IMFs:"),
@@ -51,15 +51,6 @@ EMD.sidebarPanel <- function(id){
   
   
 } # EMD.sidebar
-
-EMD.mainPanel <- buildMainPanel(id="EMD",render="highchartOutput",
-                                  title="Empirical Mode Decomposition (EMD)",
-                                  title.AT="Acceleration (AT)",
-                                  title.VT="Velocity (VT)",
-                                  title.DT="Displacement (DT)",
-                                  height="700px")
-
-EMD.tabPanel <- buildTabPanel(id="EMD")
 
 
 EMD.server <- function(id,.data,series,yAxis.legend="s(t)",xAxis.legend="t",color.palette="Dynamic"){

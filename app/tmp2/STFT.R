@@ -1,4 +1,4 @@
-STFT.sidebarPanel <- function(id){
+STFT.sidebar <- function(id){
   ns=NS(id)
   tagList(
     helpText("Windows Length k=N/NW:"),
@@ -83,16 +83,6 @@ STFT.sidebarPanel <- function(id){
   
 } # STFT.sidebar
 
-STFT.mainPanel <- buildMainPanel(
-  id="STFT",render="plotOutput",
-  title="Short-Time Fourier Transform (STFT)",
-  title.AT="Acceleration (AT)",
-  title.VT="Velocity (VT)",
-  title.DT="Displacement (DT)",
-  height="500px")
-
-STFT.tabPanel <- buildTabPanel(id="STFT")
-
 STFT.server <- function(id,.data,series){
   moduleServer(
     id, 
@@ -131,8 +121,8 @@ STFT.server <- function(id,.data,series){
         DT
       })
       
-      
-      
+    
+  
       
       output[[series]] <- renderPlot({
         req(DATA())
@@ -166,3 +156,5 @@ STFT.server <- function(id,.data,series){
       })
     })
 }
+
+

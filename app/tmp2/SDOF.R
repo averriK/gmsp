@@ -1,5 +1,22 @@
+SDOF.navbarPageUI <- function(id,title="Single Degree of Freedom (SDOF)",title.AT="Pseudo Spectral Acceleration (PSA)",title.VT="Pseudo Spectral Velocity (PSV)",title.DT="Spectrl Displacement (SD)",height="500px"){
+  ns <- NS(id)
+  navbarPage(title=title,
+             id = id,
+             fluidRow(
+               column(
+                 width=8,
+                 tabsetPanel(
+                   tabPanel(title=title.AT,highchartOutput(ns("AT"),height = height)),
+                   tabPanel(title=title.VT,highchartOutput(ns("VT"),height = height)),
+                   tabPanel(title=title.DT,highchartOutput(ns("DT"),height = height))
+                 )
+               )
+             )
+  ) # navbarPage
+}
 
-SDOF.sidebarPanel <- function(id = "SDOF"){
+
+SDOF.sidebar <- function(id){
   ns=NS(id)
   tagList(
     helpText("Smoothing Method:"),
@@ -59,17 +76,16 @@ SDOF.sidebarPanel <- function(id = "SDOF"){
       inline = TRUE,
       status = "danger",
       fill = TRUE
-    )
+    ),
+    
+    
+    
+    
+    
+    
+    
   )
 }
-
-SDOF.mainPanel <- buildMainPanel(id = "SDOF",render="highchartOutput",
-                           title="Spectral Intensities (SDOF)",
-                           title.AT="Pseudo Spectral Acceleration (PSA)",
-                           title.VT="Pseudo Spectral Velocity (PSV)",
-                           title.DT="Spectral Displacement (SD)",height="500px")
-
-SDOF.tabPanel <- buildTabPanel(id="SDOF")
 
 SDOF.server <- function(id,.data,color.palette="Dynamic"){
   moduleServer(
@@ -127,6 +143,8 @@ SDOF.server <- function(id,.data,color.palette="Dynamic"){
         PLOT
       })
       
+      
+      
       output[["VT"]] <- renderHighchart({
         req(DATA())
         PLOT <-  buildPlot::buildPlot(
@@ -159,5 +177,9 @@ SDOF.server <- function(id,.data,color.palette="Dynamic"){
         
       })
       
+      
     })
 }
+
+
+

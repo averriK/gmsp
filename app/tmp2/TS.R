@@ -1,29 +1,3 @@
-TS.sidebarPanel <- function(id) {
-  ns <- NS(id)
-  tagList(
-    helpText("Direction:"),
-    prettyRadioButtons(
-      inputId = ns("ocid"),
-      label = NULL,
-      choices = c("H1", "H2","UP"),
-      selected = "H1",
-      inline = TRUE,
-      status = "danger",
-      fill = TRUE
-    )
-  )
-}
-
-TS.mainPanel <- buildMainPanel(
-  id="TS",
-  title="Time Series (TS)",
-  title.AT="Acceleration (AT)",
-  title.VT="Velocity (VT)",
-  title.DT="Displacement (DT)",
-  height="500px")
-
-TS.tabPanel <- buildTabPanel(id="TS")
-
 TS.server <- function(id,.data,series,yAxis.legend="s(t)",xAxis.legend="t",color.palette="Dynamic"){
   moduleServer(
     id, 
@@ -57,3 +31,24 @@ TS.server <- function(id,.data,series,yAxis.legend="s(t)",xAxis.legend="t",color
       })
     })
 }
+
+TS.sidebar <- function(id) {
+  ns <- NS(id)
+  tagList(
+    wellPanel(
+      titlePanel("OCID"),
+      prettyRadioButtons(
+        inputId = ns("ocid"),
+        label = NULL,
+        choices = c("H1", "H2","UP"),
+        selected = "H1",
+        inline = TRUE,
+        status = "danger",
+        fill = TRUE
+      )
+    )
+  )
+}
+
+
+
