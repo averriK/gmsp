@@ -32,19 +32,23 @@ TS.server <- function(id,.data,series,yAxis.legend="s(t)",xAxis.legend="t",color
     })
 }
 
-TS.sidebar <- function(id){
-  ns=NS(id)
+TS.sidebar <- function(id) {
+  ns <- NS(id)
   tagList(
-    helpText("OCID:"),
-    prettyRadioButtons(
-      inputId = ns("ocid"),
-      label = NULL,
-      choices = c("H1", "H2","UP"),
-      selected = "H1",
-      inline = TRUE,
-      status = "danger",
-      fill = TRUE
+    wellPanel(
+      titlePanel("OCID"),
+      prettyRadioButtons(
+        inputId = ns("ocid"),
+        label = NULL,
+        choices = c("H1", "H2","UP"),
+        selected = "H1",
+        inline = TRUE,
+        status = "danger",
+        fill = TRUE
+      )
     )
   )
 }
+
+
 
