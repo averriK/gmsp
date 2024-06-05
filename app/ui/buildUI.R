@@ -346,7 +346,7 @@ CWT.sidebarPanel <- function(id){
   ) # tagList
   
   
-} # WTC.sidebar
+} # CWT.sidebar
 
 
 # -----------------------------------------------------------------------------

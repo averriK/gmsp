@@ -22,9 +22,9 @@ server <- function(input, output, session) {
   STFT.server(id="STFT",.data=TSL,series="DT")
   # 
   
-  WTC.server(id="WTC",.data=TSL,series="AT")
-  WTC.server(id="WTC",.data=TSL,series="VT")
-  WTC.server(id="WTC",.data=TSL,series="DT")
+  CWT.server(id="CWT",.data=TSL,series="AT")
+  CWT.server(id="CWT",.data=TSL,series="VT")
+  CWT.server(id="CWT",.data=TSL,series="DT")
   # 
   
   
