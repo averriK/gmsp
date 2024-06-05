@@ -1,12 +1,4 @@
 
-source("setup.R",local = TRUE)
-source("R/utils.R",local = TRUE)
-source("R/TS.R",local = TRUE)
-source("R/FFT.R",local = TRUE)
-source("R/SDOF.R",local = TRUE)
-source("R/STFT.R",local = TRUE)
-source("R/WTC.R",local = TRUE)
-source("R/EMD.R",local = TRUE)
 
 message("Reading AT2 data")
 DATASET <- readRDS(file.path("data/AT2.Rds"))
@@ -21,7 +13,7 @@ IMF1 <- 0
 IMFN <-0
 message("Building TimeSeries")
 
-AUX <- buildTS(
+AUX <- gmsp::buildTS(
   x=RAW$AT,
   dt=RAW$dt,
   Units=RAW$SourceUnits,
@@ -38,6 +30,8 @@ AUX <- buildTS(
 
 TSL <- AUX$TSL[ OCID  %in%  c("H1","H2","UP")]
 rm(AUX)
+
+
 
 
 # DELETE
