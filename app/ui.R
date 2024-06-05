@@ -1,7 +1,12 @@
 source("setup.R",local = TRUE)
-source("buildUI.R")
+source("build_sidebarPanel.R")
+source("build_mainPanel.R")
+source("build_navPage.R")
 ui <- navbarPage(
-  "Shiny Dashboard",
+  title="GMRS",
+  header = tagList(
+    # GMRS.header()
+  ),
   tabPanel(
     "GMDB", 
     sidebarLayout(
