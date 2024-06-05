@@ -1,5 +1,5 @@
 source("setup.R",local = TRUE)
-source("ui/buildUI.R")
+source("buildUI.R")
 ui <- navbarPage(
   "Shiny Dashboard",
   tabPanel(
