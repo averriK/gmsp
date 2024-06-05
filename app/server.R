@@ -1,14 +1,8 @@
 source("setup.R",local = TRUE)
 source("global.R",local = TRUE)
-source("R/helpers.R",local = TRUE)
 
-source("R/GMDB.R",local = TRUE)
-source("R/TS.R",local = TRUE)
-source("R/SDOF.R",local = TRUE)
-source("R/FFT.R",local = TRUE)
-source("R/STFT.R",local = TRUE)
-source("R/WTC.R",local = TRUE)
-source("R/EMD.R",local = TRUE)
+source("R/buildServer.R")
+
 
 server <- function(input, output, session) {
 
