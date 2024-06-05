@@ -5,9 +5,11 @@ GMDB.navPage <- function(id) {
     "GMDB", 
     sidebarLayout(
       sidebarPanel(
+        width=3,
         # GMDB specific sidebar elements
       ),
       mainPanel(
+        width=6,
         # GMDB specific main content
       )
     )
@@ -19,9 +21,11 @@ TS.navPage <- function(id) {
     "TS",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         TS.sidebarPanel("TS")
       ),
       mainPanel(
+        width=6,
         TS.navbarPageUI(
           id = "TS", 
           title = "Time Series (TS)",
@@ -38,9 +42,11 @@ SDOF.navPage <- function(id) {
     "SDOF",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         SDOF.sidebarPanel("SDOF")
       ),
       mainPanel(
+        width=6,
         SDOF.navbarPageUI(
           id = "SDOF", 
           title = "Single Degree of Freedom (SDOF)",
@@ -57,9 +63,11 @@ STFT.navPage <- function(id) {
     "STFT",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         STFT.sidebarPanel("STFT")
       ),
       mainPanel(
+        width=6,
         STFT.navbarPageUI(
           id = "STFT", 
           title = "Short-Time Fourier Transform (STFT)",
@@ -76,9 +84,11 @@ FFT.navPage <- function(id) {
     "FFT",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         FFT.sidebarPanel("FFT")
       ),
       mainPanel(
+        width=6,
         FFT.navbarPageUI(
           id = "FFT", 
           title = "Fast Fourier Transform (FFT)",
@@ -95,9 +105,11 @@ CWT.navPage <- function(id) {
     "CWT",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         CWT.sidebarPanel("CWT")
       ),
       mainPanel(
+        width=6,
         CWT.navbarPageUI(
           id = "CWT", 
           title = "Continuous Wavelet Transform (CWT)",
@@ -114,9 +126,11 @@ EMD.navPage <- function(id) {
     "EMD",
     sidebarLayout(
       sidebarPanel(
+        width=3,
         EMD.sidebarPanel("EMD")
       ),
       mainPanel(
+        width=6,
         EMD.navbarPageUI(
           id = "EMD", 
           title = "Empirical Mode Decomposition (EMD)",
