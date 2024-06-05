@@ -1,6 +1,6 @@
 
 
-FFT.sidebar <- function(id){
+FFT.sidebarPanel <- function(id){
   ns=NS(id)
   tagList(
     
@@ -78,6 +78,26 @@ FFT.sidebar <- function(id){
   )
 }
 
+FFT.mainPanel <- buildMainPanel(
+  id="FFT",render="highchartOutput",
+  title="Fast Fourier Transform (FFT)",
+  title.AT="Acceleration (AT)",
+  title.VT="Velocity (VT)",
+  title.DT="Displacement (DT)",
+  height="500px")
+
+# FFT.tabPanel <- buildTabPanel(id="FFT")
+FFT.tabPanel <-tabPanel(
+  title="FFT",
+  sidebarLayout(
+    sidebarPanel(
+      FFT.sidebarPanel(id="FFT")
+    ),
+    mainPanel(
+      FFT.mainPanel
+    )
+  )
+)
 
 FFT.server <- function(id,.data,series,yAxis.legend="A(fs)",xAxis.legend="fs",color.palette="Dynamic"){
   moduleServer(

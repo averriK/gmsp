@@ -1,15 +1,13 @@
-WTC.sidebar <- function(id){
+CWT.sidebarPanel <- function(id){
   ns=NS(id)
   tagList(
     helpText("Wavelet family:"),
-    prettyRadioButtons(
+    radioButtons(
       inputId = ns("mother"),
       label = NULL,
       choices=c("morlet","dog","paul"),
       selected="morlet",
-      inline = TRUE, 
-      status = "danger",
-      fill = TRUE
+      inline = TRUE
     ),
     
     
@@ -52,25 +50,31 @@ WTC.sidebar <- function(id){
   ) # tagList
   
   
-} # WTC.sidebar
+} 
+
+CWT.mainPanel <- buildMainPanel(  id="CWT",render="plotOutput",
+                                  title="Continuous Wavelet Transform (CWT)",
+                                  title.AT="Acceleration (AT)",
+                                  title.VT="Velocity (VT)",
+                                  title.DT="Displacement (DT)",
+                                  height="700px")
+
+# CWT.tabPanel <- buildTabPanel(id="CWT")
+CWT.tabPanel <- tabPanel(
+  title="CWT",
+  sidebarLayout(
+    sidebarPanel(
+      CWT.sidebarPanel(id="CWT")
+    ),
+    mainPanel(
+      CWT.mainPanel
+    )
+  )
+)
 
 
 
-WTC.ui <- function(id){
-  ns <- NS(id)
-  nav_panel(
-    title="WTC", 
-    value=id,
-    navset_tab(
-      nav_panel(title="WTC(AT)",plotOutput(ns("AT"),height = "700px")),
-      nav_panel(title="WTC(VT)",plotOutput(ns("VT"),height = "700px")),
-      nav_panel(title="WTC(DT)",plotOutput(ns("DT"),height = "700px"))
-    )# navset_tab
-  )# nav_panel
-}
-
-
-WTC.server <- function(id,.data,series){
+CWT.server <- function(id,.data,series){
   moduleServer(
     id, 
     function(input, output, session){
