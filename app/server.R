@@ -1,6 +1,6 @@
 source("setup.R",local = TRUE)
 source("global.R",local = TRUE)
-source("buildServer.R")
+source("build_server.R")
 
 
 server <- function(input, output, session) {

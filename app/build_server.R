@@ -38,14 +38,6 @@ SDOF.server <- function(id,.data,color.palette="Dynamic"){
   moduleServer(
     id, 
     function(input, output, session){
-      observe({
-        cat("Current xi value:", input$xi, "\n")
-        cat("Current OCID value:", input$ocid, "\n")  
-        cat("Current smoothing value:", input$smoothing, "\n")  
-        cat("Current cv value:", input$cv, "\n")  
-        cat("Current sigma value:", input$sigma, "\n")  
-        cat("Current window value:", input$window, "\n")  
-      })
       
       DATA <- reactive({
         req(input$ocid)
@@ -182,13 +174,6 @@ STFT.server <- function(id,.data,series){
     id, 
     function(input, output, session){
       stopifnot(series %in% c("AT","VT","DT"))
-      observe({
-        cat("Current OCID value:", input$ocid, "\n")  
-        cat("Current kf value:", input$kf, "\n")  
-        cat("Current k value:", input$k, "\n")  
-        cat("Current ovlp value:", input$ovlp, "\n")  
-      })
-      
       DATA <- reactive({
         req(input$ocid)
         stopifnot(length(input$ocid)==1 && input$ocid %in% c("H1","H2","UP"))
@@ -257,12 +242,7 @@ CWT.server <- function(id,.data,series){
     id, 
     function(input, output, session){
       stopifnot(series %in% c("AT","VT","DT"))
-      observe({
-        cat("Current OCID value:", input$ocid, "\n")  
-        cat("Current kf value:", input$kf, "\n")  
-        cat("Current k value:", input$k, "\n")  
-        cat("Current ovlp value:", input$ovlp, "\n")  
-      })
+    
       
       DATA <- reactive({
         req(input$ocid)
