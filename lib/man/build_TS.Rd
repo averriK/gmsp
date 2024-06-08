@@ -10,13 +10,10 @@ build_TS(
   dt = NULL,
   Units,
   OrderTS = 2,
-  OrderEMD = 2,
   Fmax = 16,
   kNyq = 3.125,
   Resample = TRUE,
   LowPass = TRUE,
-  removeIMF1 = 0,
-  removeIMFn = 0,
   TargetUnits = "mm",
   NW = 1024,
   OVLP = 75,
@@ -36,8 +33,6 @@ build_TS(
 
 \item{OrderTS}{integer}
 
-\item{OrderEMD}{integer}
-
 \item{Fmax}{integer}
 
 \item{kNyq}{numeric}
@@ -45,10 +40,6 @@ build_TS(
 \item{Resample}{boolean}
 
 \item{LowPass}{boolean}
-
-\item{removeIMF1}{boolean}
-
-\item{removeIMFn}{boolean}
 
 \item{TargetUnits}{character Units}
 

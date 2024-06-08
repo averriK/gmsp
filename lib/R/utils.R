@@ -199,18 +199,6 @@ getIM <- function(a=NULL,v=NULL,d=NULL,dt=NULL,Units=NULL,TargetUnits="mm"){
   return(X)
 }
 
-.detrend <- function(X,dt,removeIMF1=0,removeIMFn=0){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  if (removeIMF1>0 ||removeIMFn>0) {
-    AUX <- build_EMF(dt=dt,s=X,method="emd",max.imf=15)
-    nimf <- AUX$nimf
-    i <- removeIMF1
-    j <- removeIMFn
-    COLS <- colnames(AUX$imf)[(i+1):(nimf-j)]
-    X <-  AUX$imf[,COLS,with = FALSE] |> rowSums()
-  }
-  return(X)
-}
 
 .derivate <- function(X,t=NULL,dt=NULL){
   on.exit(expr={rm(list = ls())}, add = TRUE)

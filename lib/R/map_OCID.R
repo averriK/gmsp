@@ -9,6 +9,9 @@
 #'
 #' @examples
 map_OCID <- function(.x){
+  
+  . <- NULL
+  on.exit(expr = {rm(list = ls())}, add = TRUE)
   DT <- copy(.x)
   stopifnot(names(DT) %in% c("OCID","AT"))
   OD <- DT[,.(PGA=max(abs(AT))),by=.(OCID)]

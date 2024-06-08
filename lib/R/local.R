@@ -5,6 +5,10 @@ s <- NULL
 value <- NULL
 variable <- NULL
 ARMS  <- NULL
+AT <- NULL
+OCID <- NULL
+isUP <- NULL
+DIR <- NULL
 ATn  <- NULL
 ATo  <- NULL
 AZC  <- NULL
