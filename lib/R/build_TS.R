@@ -4,14 +4,11 @@
 #' @param dt numeric
 #' @param ts numeric
 #' @param OrderTS integer
-#' @param OrderEMD integer
 #' @param Units character
 #' @param Fmax integer
 #' @param kNyq numeric
 #' @param Resample boolean
 #' @param LowPass boolean
-#' @param removeIMF1 boolean
-#' @param removeIMFn boolean
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
@@ -21,7 +18,7 @@
 
 #'
 #' @return list
-#' @export buildTS
+#' @export 
 #'
 #' @examples
 #'
@@ -35,16 +32,13 @@
 #' @importFrom purrr map
 #'
 #'
-buildTS <- function(
+build_TS <- function(
     x, ts=NULL ,dt=NULL, Units,
     OrderTS=2, #0 Displacement, 1 Velocity, 2 Acceleration
-    OrderEMD=2, #0 Displacement, 1 Velocity, 2 Acceleration
     Fmax = 16,
     kNyq=3.125, #>2.5
     Resample = TRUE,
     LowPass = TRUE,
-    removeIMF1 = 0,
-    removeIMFn = 0,
     TargetUnits = "mm",
     NW = 1024,
     OVLP = 75,
@@ -113,10 +107,7 @@ buildTS <- function(
     Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=Astop.AT,Apass=Apass.AT)}))]
     AT <- X
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-    if(2 %in% OrderEMD){
-      AT <-AT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    } else {
-      AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]}
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
     names(AT) <- OCID
     # browser()
     VT <- AT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
@@ -126,11 +117,7 @@ buildTS <- function(
       Wo <- rbind(Wo, O)
     }
     VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-
-    if(1 %in% OrderEMD){
-      VT <-VT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    } else {
-      VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]}
+    VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     names(VT) <- OCID
 
     DT <- VT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
@@ -141,29 +128,21 @@ buildTS <- function(
     }
     DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
 
-    if(0 %in% OrderEMD){
-      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    } else {
-      DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]}
+    # if(0 %in% OrderEMD){
+    #   DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
+    # } else {
+    #   DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]}
 
-
+    DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]
     names(DT) <- OCID
   }
 
   # Case #1. Velocity Time Histories ----
   if(OrderTS==1){
     VT <- X
-    if(1 %in% OrderEMD){
-      VT <-VT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    } else {
-      VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]}
-
+    VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
     DT <- VT[, lapply(.SD, function(x){.integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
 
-    if(0 %in% OrderEMD){
-      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    } else {
-      DT <-DT[, .(sapply(.SD, function(x){x-mean(x)}))]}
 
     names(DT) <- OCID
 
@@ -173,10 +152,8 @@ buildTS <- function(
   # Case #0. Displacement Time Historyes
   if(OrderTS==0){
     DT <- X
-    if(0 %in% OrderEMD){
-      DT <-DT[, .(sapply(.SD, function(x){.detrend(X=x,dt=dt,removeIMF1=removeIMF1,removeIMFn=removeIMFn)}))]
-    }
-
+    # Not sure if we can remove the mean in displacements.
+    # DT <- DT[, .(sapply(.SD, function(x){x-mean(x)}))]
 
   }
 

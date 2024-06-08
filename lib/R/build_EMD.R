@@ -25,11 +25,11 @@
 #' @importFrom EMD emd
 #'
 #' @return list
-#' @export buildIMF
+#' @export 
 #'
 #' @examples
 #'
-buildIMF <- function(s,t=NULL,dt=NULL,method="emd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE,verbose=FALSE){
+build_EMD <- function(s,t=NULL,dt=NULL,method="emd",boundary="wave", max.imf=15,noise.type="gaussian",noise.amp=0.5e-7,trials=10,stop.rule="type5",plot=TRUE,verbose=FALSE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
 stopifnot(!is.null(s) && tolower(method) %in% c("emd","eemd","ceemd") && tolower(stop.rule) %in% c("type1","type2","type3","type4","type5") && tolower(boundary) %in% c("none","wave","symmetric","periodic","evenodd") && noise.type %in% c("uniform","gaussian") )
 

@@ -1,13 +1,13 @@
 # -----------------------------------------------------------------------------
 TS.navbarPageUI <- function(id,title="Time Series (TS)",title.AT="Acceleration (AT)",title.VT="Velocity (VT)",title.DT="Displacement (DT)",height="500px"){
   ns <- NS(id)
-  tagList(
+  
     navbarPage(
       title=title,
       id = id,
       fluidRow(
         column(
-          width=8,
+          width=12,
           tabsetPanel(
             tabPanel(title=title.AT,highchartOutput(ns("AT"),height = height)),
             tabPanel(title=title.VT,highchartOutput(ns("VT"),height = height)),
@@ -16,7 +16,7 @@ TS.navbarPageUI <- function(id,title="Time Series (TS)",title.AT="Acceleration (
         ) # column
       ) # fluidRow
     ) # navbarPage
-  )
+
 }
 
 SDOF.navbarPageUI <- function(id,title="Single Degree of Freedom (SDOF)",title.AT="Pseudo Spectral Acceleration (PSA)",title.VT="Pseudo Spectral Velocity (PSV)",title.DT="Spectrl Displacement (SD)",height="500px"){
@@ -26,7 +26,7 @@ SDOF.navbarPageUI <- function(id,title="Single Degree of Freedom (SDOF)",title.A
     id = id,
     fluidRow(
       column(
-        width=8,
+        width=12,
         tabsetPanel(
           tabPanel(title=title.AT,highchartOutput(ns("AT"),height = height)),
           tabPanel(title=title.VT,highchartOutput(ns("VT"),height = height)),
@@ -44,7 +44,7 @@ STFT.navbarPageUI <- function(id,title="Short-Time Fourier Transform (STFT)",tit
     id = id,
     fluidRow(
       column(
-        width=8,
+        width=12,
         tabsetPanel(
           tabPanel(title=title.AT,plotOutput(ns("AT"),height = height)),
           tabPanel(title=title.VT,plotOutput(ns("VT"),height = height)),
@@ -62,7 +62,7 @@ FFT.navbarPageUI <- function(id,title="Fast Fourier Transform (FFT)",title.AT="A
     id = id,
     fluidRow(
       column(
-        width=8,
+        width=12,
         tabsetPanel(
           tabPanel(title=title.AT,plotOutput(ns("AT"),height = height)),
           tabPanel(title=title.VT,plotOutput(ns("VT"),height = height)),
@@ -80,7 +80,7 @@ CWT.navbarPageUI <- function(id,title="Continuous Wavelet Transform (CWT)",title
     id = id,
     fluidRow(
       column(
-        width=8,
+        width=12,
         tabsetPanel(
           tabPanel(title=title.AT,plotOutput(ns("AT"),height = height)),
           tabPanel(title=title.VT,plotOutput(ns("VT"),height = height)),
@@ -98,7 +98,7 @@ EMD.navbarPageUI <- function(id,title="Empirical Mode Decomposition (EMD)",title
     id = id,
     fluidRow(
       column(
-        width=8,
+        width=12,
         tabsetPanel(
           tabPanel(title=title.AT,plotOutput(ns("AT"),height = height)),
           tabPanel(title=title.VT,plotOutput(ns("VT"),height = height)),

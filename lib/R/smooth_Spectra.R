@@ -9,7 +9,7 @@
 #' @param sigma numeric
 #'
 #' @return list
-#' @export smoothSpectra
+#' @export 
 #'
 #' @import data.table
 #' @importFrom stats filter
@@ -23,7 +23,8 @@
 #' @importFrom stats convolve
 #'
 #' @examples
-smoothSpectra <- function(fs,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
+#' 
+smooth_Spectra <- function(fs,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
   stopifnot(tolower(method) %in% c("none","ma","sg","sg","gk","ema","sm"))
   As <- switch(
     method,

@@ -8,14 +8,14 @@
 #' @param zp numeric
 #'
 #' @return data.table
-#' @export buildFFT
+#' @export 
 #'
 #' @import data.table
 
 #'
 #' @examples
 #'
-buildFFT <- function(.x=NULL,s=NULL,t=NULL,zp=256,kf=1){
+build_FFT <- function(.x=NULL,s=NULL,t=NULL,zp=256,kf=1){
   if(!is.null(.x)){
     stopifnot(all(c("s","t") %in% names(.x)))
     s <- .x$s-mean(.x$s)
