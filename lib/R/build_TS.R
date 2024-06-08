@@ -21,7 +21,7 @@
 
 #'
 #' @return list
-#' @export buildTS
+#' @export 
 #'
 #' @examples
 #'
@@ -35,7 +35,7 @@
 #' @importFrom purrr map
 #'
 #'
-buildTS <- function(
+build_TS <- function(
     x, ts=NULL ,dt=NULL, Units,
     OrderTS=2, #0 Displacement, 1 Velocity, 2 Acceleration
     OrderEMD=2, #0 Displacement, 1 Velocity, 2 Acceleration

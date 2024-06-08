@@ -23,7 +23,8 @@ Imports:
     hht,
     EMD,
     MASS,
-    expm
+    expm,
+    pracma
 Depends: 
     R (>= 3.5)
 LazyData: true
