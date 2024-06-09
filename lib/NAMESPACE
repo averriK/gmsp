@@ -2,7 +2,7 @@
 
 export(build_EMD)
 export(build_FFT)
-export(build_PSA)
+export(build_Spectra)
 export(build_TS)
 export(map_OCID)
 export(remove_IMF)

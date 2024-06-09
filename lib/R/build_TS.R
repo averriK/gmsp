@@ -73,11 +73,6 @@ build_TS <- function(
 
   OCID <- names(X)
 
-
-
-
-  ## Set Scale Reference ----
-
   ## Scale record ----
   if(tolower(Scale)=="relative"){
     Ao <- apply(X, 2, function(x) { max(abs(x))})
