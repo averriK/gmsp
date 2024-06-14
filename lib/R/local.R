@@ -1,3 +1,4 @@
+. <- NULL
 ID <- NULL
 X <- NULL
 Y <- NULL
@@ -9,6 +10,7 @@ AT <- NULL
 OCID <- NULL
 isUP <- NULL
 DIR <- NULL
+RecordSN <- NULL
 ATn  <- NULL
 ATo  <- NULL
 AZC  <- NULL
@@ -52,3 +54,4 @@ WoI  <- NULL
 namp  <- NULL
 NIMF  <- NULL
 NIT  <- NULL
+fm <- Tm <- DATA <- offset <- NULL

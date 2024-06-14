@@ -5,7 +5,7 @@
 \title{Title}
 \usage{
 smooth_Spectra(
-  fs,
+  Tn,
   A,
   method = "none",
   window = 5,
@@ -15,9 +15,9 @@ smooth_Spectra(
 )
 }
 \arguments{
-\item{fs}{vector}
+\item{Tn}{vector. Frequency (Periods) vector}
 
-\item{A}{zp <- req(input$zp) |> as.double() vector}
+\item{A}{vector. Amplitude spectrum}
 
 \item{method}{string}
 
