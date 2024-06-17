@@ -31,7 +31,7 @@
 #'
 get_imf <- function(.x=NULL, s=NULL, t=NULL, dt=NULL, method="emd", boundary="wave", max.imf=15, noise.type="gaussian", noise.amp=0.5e-7, trials=10, stop.rule="type5", verbose=FALSE) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
-  
+  . <- NULL
   stopifnot(tolower(method) %in% c("emd", "eemd", "ceemd"))
   stopifnot(tolower(stop.rule) %in% c("type1", "type2", "type3", "type4", "type5"))
   stopifnot(tolower(boundary) %in% c("none", "wave", "symmetric", "periodic", "evenodd"))
