@@ -1,7 +1,7 @@
 #' Title
 #'
-#' @param fs vector
-#' @param A zp <- req(input$zp) |> as.double() vector
+#' @param Tn vector. Frequency (Periods) vector
+#' @param A vector. Amplitude spectrum
 #' @param method string
 #' @param window numeric
 #' @param po numeric
@@ -24,7 +24,7 @@
 #'
 #' @examples
 #' 
-smooth_Spectra <- function(fs,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
+smooth_Spectra <- function(Tn,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
   stopifnot(tolower(method) %in% c("none","ma","sg","sg","gk","ema","sm"))
   As <- switch(
     method,
@@ -43,18 +43,15 @@ smooth_Spectra <- function(fs,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
       zoo::rollmean(A, window, align='center', fill=NA)  # Exponential Moving Average
     },
     "sm" = {
-      spline_fit <- stats::smooth.spline(fs, A,cv=cv)
-      predict(spline_fit, fs)$y
+      spline_fit <- stats::smooth.spline(Tn, A,cv=cv)
+      predict(spline_fit, Tn)$y
     },
     "none" = {
       A
-    },
-    {
-      stop("Invalid key")
     }
   )
 
   # Ensure the smoothed amplitude spectrum has the same length as the frequency vector
-  As <- c(As, rep(0, length(fs) - length(As)))
-  DT <- list(As=As, fs=fs)
+  As <- c(As, rep(0, length(Tn) - length(As)))
+  DT <- list(As=As, Tn=Tn)
 }

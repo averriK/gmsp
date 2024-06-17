@@ -46,7 +46,7 @@ SDOF.server <- function(id,.data,color.palette="Dynamic"){
         DT <- .data[ID =="AT" & OCID == input$ocid,.(t,s)]
         if(nrow(DT)==0) return(NULL)
         xi <- req(input$xi)
-        DT <- gmsp::buildPSA(.x=DT,Units=UNITS,xi=xi) #UNITS is a global variable
+        DT <- gmsp::build_PSA(.x=DT,Units=UNITS,xi=xi) #UNITS is a global variable
         
         
         req(input$smoothing)
@@ -55,13 +55,13 @@ SDOF.server <- function(id,.data,color.palette="Dynamic"){
         sigma <- req(input$sigma) |> as.double()
         
         DATA <- data.table()
-        AUX <- gmsp::smoothSpectra(fs=DT$Tn,A=DT$PSA,method=input$smoothing,window=window,cv=cv,sigma=sigma)
+        AUX <- gmsp::smooth_Spectra(fs=DT$Tn,A=DT$PSA,method=input$smoothing,window=window,cv=cv,sigma=sigma)
         DATA <- rbindlist(list(DATA, data.table(ID="PSA",X=AUX$fs,Y=AUX$As)))
         
-        AUX <- gmsp::smoothSpectra(fs=DT$Tn,A=DT$PSV,method=input$smoothing,window=window,cv=cv,sigma=sigma)
+        AUX <- gmsp::smooth_Spectra(fs=DT$Tn,A=DT$PSV,method=input$smoothing,window=window,cv=cv,sigma=sigma)
         DATA <-  rbindlist(list(DATA, data.table(ID="PSV",X=AUX$fs,Y=AUX$As)))
         
-        AUX <- gmsp::smoothSpectra(fs=DT$Tn,A=DT$SD,method=input$smoothing,window=window,cv=cv,sigma=sigma)
+        AUX <- gmsp::smooth_Spectra(fs=DT$Tn,A=DT$SD,method=input$smoothing,window=window,cv=cv,sigma=sigma)
         DATA <-  rbindlist(list(DATA, data.table(ID="SD",X=AUX$fs,Y=AUX$As)))
         
         DATA

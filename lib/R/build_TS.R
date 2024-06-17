@@ -56,6 +56,8 @@ build_TS <- function(
   }
   ts <- seq(0,(NP-1)*dt,by=dt)
   Fs <- 1 / dt
+  
+  
 
   ## Scale Units  ----
 
@@ -72,12 +74,12 @@ build_TS <- function(
   }
 
   OCID <- names(X)
-
-
-
-
-  ## Set Scale Reference ----
-
+  
+  # Export RAW record scaled to TargetUnits
+  
+  RTSW <- data.table(ts=ts, Units=TargetUnits,X)
+  setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
+  
   ## Scale record ----
   if(tolower(Scale)=="relative"){
     Ao <- apply(X, 2, function(x) { max(abs(x))})
@@ -218,5 +220,5 @@ build_TS <- function(
   df <- Fs / NW # 0.03125#
   fs <- seq(from = 0, by = df, length.out = NW / 2)
 
-  return(list(TSL=TSL,TSW=TSW,Wo=Wo,Ao=Ao,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = Units))
+  return(list(RTSW=RTSW,TSL=TSL,TSW=TSW,Wo=Wo,Ao=Ao,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = Units))
 }
