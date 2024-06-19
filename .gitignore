@@ -41,3 +41,5 @@ vignettes/*.pdf
 
 /app/data/
 /.quarto/
+
+lib/R/UntitledR.R
