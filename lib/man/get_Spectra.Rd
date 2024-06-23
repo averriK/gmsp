@@ -18,10 +18,6 @@ get_Spectra(.x = NULL, s = NULL, t = NULL, dt = NULL, Tn = NULL, xi = 0.05)
 \item{Tn}{vector}
 
 \item{xi}{double}
-
-\item{Units}{string}
-
-\item{TargetUnits}{string}
 }
 \value{
 list

@@ -4,8 +4,6 @@
 #' @param s vector
 #' @param t vector
 #' @param dt double
-#' @param Units string
-#' @param TargetUnits string
 #' @param Tn vector
 #' @param xi double
 #'
@@ -66,3 +64,8 @@ get_Spectra <- function(.x=NULL,s=NULL,t=NULL,dt=NULL,Tn = NULL,xi=0.05){
   return(list( Tn=Tn, xi=xi,PSA = PSA))
 
 }
+
+# seq1 <- (10^seq(log10(0.001), log10(0.1), length.out = 40)) |> round(3)
+# seq2 <- (10^seq(log10(0.1), log10(1), length.out = 20)) |> round(2)
+# seq3 <- (10^seq(log10(1), log10(10), length.out = 10)) |> round(1)
+# c(seq1, seq2, seq3) |> unique() |> print()

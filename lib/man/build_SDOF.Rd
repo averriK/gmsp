@@ -4,14 +4,12 @@
 \alias{build_SDOF}
 \title{Title}
 \usage{
-build_SDOF(TSL, xi = 0.05, Units)
+build_SDOF(TSL, xi = 0.05)
 }
 \arguments{
 \item{TSL}{data.table. Time Series List}
 
 \item{xi}{numeric. Damping ratio}
-
-\item{Units}{character. Units of the time series}
 }
 \description{
 Title
