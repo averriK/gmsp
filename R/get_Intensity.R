@@ -12,7 +12,7 @@
 
 get_Intensity <- function(TSL,TargetUnits="mm"){
   on.exit(expr={rm(list = ls())}, add = TRUE)
-  
+  . <- NULL
   # Arias Intensity -------------------------------------------------------------
   g <- .getG(TargetUnits) #GMSP$g
   IA <- TSL[ID=="AT",.(ID="AI",value=.getAI(x=s,t=t,g=g)),by=.(RecordSN,DIR,OCID)]
