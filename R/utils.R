@@ -64,7 +64,6 @@
   return(X)
 }
 
-
 .derivate <- function(X,t=NULL,dt=NULL){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   n <- length(X)
@@ -139,7 +138,6 @@
   return(HP*LP)
 
 }
-
 
 .padZeros <- function(x,nz=0,OVLP=75,NW=1024){
   on.exit(expr={rm(list = ls())}, add = TRUE)
@@ -229,10 +227,6 @@
   return(HD)
 }
 
-.getIA <- function(x,dt,g){
-  as.numeric(x %*% x)*dt*pi/(2*g)
-}
-
 .getSF <- function(SourceUnits,TargetUnits,g_mms2=9806.650){
   switch (SourceUnits,
           "m" = switch(TargetUnits,"mm"= 1000,"cm"=100,"m"=1,NULL),
@@ -244,77 +238,6 @@
   )
 }
 
-.getZC <- function(AT){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  NP <- length(AT)
-  if(NP>2){ZC <- sum(sign( AT[2:NP])== -sign(AT[1:(NP-1)]))}
-  else {ZC=0}
-
-  return(ZC)
-}
-
-.getRMS <- function(x){
-  sqrt(1/length(x)*as.numeric(x%*%x))}
-
-.getCAV5 <- function(a,tn,Units="mm"){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  AT <- copy(a)
-  dt <- tn[2]-tn[1]
-  # a5=5.099/1000*g
-  a5 <- switch(tolower(Units),"mm"= 50,"cm"=50/10,"m"=50/1000,NULL)
-  AT <- abs(AT)
-  AT[AT < a5] <- 0
-  idx <-  2:length(AT)
-  X1 <- rep(dt,length(AT)-1)
-  X2 <- (AT[idx] + AT[idx-1])/ 2
-  CAV5 <- dt*as.double( X1 %*% X2 )
-  return (CAV5 )
-}
-
-
-.getCRC <- function(x){toupper(digest(object=x,algo="crc32"))}
-
-.getHBD <- function(AT,tn,a=0.05,b=0.95,g=9806.650) {
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  dt <- tn[2]-tn[1]
-  IA <- dt*(AT%*%AT)*pi/(2*g)
-  SumIA <- pi*dt*cumsum(AT^2)
-  A <- a*2*g*IA
-  B <- b*2*g*IA
-  k <- 1
-  while (SumIA[k]<A){
-    k <- k+1
-  }
-  ta <- tn[k]
-  while (SumIA[k]<B){
-    k <- k+1
-  }
-  tb <- tn[k]
-  D  <- tb-ta
-  return(D)
-}
-
-.getTm <- function(X,Fs=NULL,fmin = 0,fmax = Inf){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  if(max(abs(X))==0) {return(0)}
-  NP <- length(X)
-  # NFFT <- nextn(NP,factors = 2)
-  AW <- 1/NP*fft(X ,inverse = FALSE)
-  df <- Fs/NP
-  NUP=ceiling(NP/2)+1
-  fs <- seq(from=1,to=NUP)*df
-  fmin <- max(fmin,min(fs))
-  fmax <- min(fmax,max(fs))
-  # idx <- inrange(fs[1:NUP],lower=max(fmin,min(fs)),upper= min(fmax,max(fs)))
-  idx <- fs>=fmin & fs<=fmax
-  Co   <- sqrt(Re(AW[1:NUP]*Conj(AW[1:NUP])))
-  # f1 <- max(fmin,min(fs))
-  # f2 <- min(fmax,max(fs))
-  # ix <- fs[1:NUP] %inrange% c(f1,(f2+fs[2]))
-  Tm <-sum(Co[idx]^2/fs[idx])/sum(Co[idx]^2)
-  return(Tm)
-}
-
 .getG <- function(TargetUnits,g_mms2=9806.650){
   switch (TargetUnits,
           "m" = g_mms2/1000,
@@ -322,44 +245,6 @@
           "mm" = g_mms2/1,
           NULL
   )
-}
-
-.getDN <- function(s,dt,kh, g,TOL=1e-3) {
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  PGA <- max(abs(s))
-  if(PGA==0) {
-    return(NA)
-  }
-  ky <- kh*PGA/g
-  ag <- s/g
-  NP <- length(ag)
-  
-  a <- double(NP+1)
-  v <- double(NP+1)
-  u <- double(NP+1)
-  for (i in 1:NP){
-    if (v[i]<TOL){
-      if (abs(ag[i])>ky){
-        n <- ag[i]/abs(ag[i])
-      }
-      else {
-        n <- ag[i]/ky
-      }
-    }
-    else {
-      n <- 1
-    }
-    a[i+1] <- (ag[i]-n*ky)*g
-    v[i+1] <- v[i]+1/2*dt*(a[i+1]+a[i]) #ok
-    if (v[i+1]<TOL){
-      v[i+1] <- 0
-      a[i+1] <- 0
-    }
-    u[i+1] <- u[i]+dt*v[i]+(1/3)*(dt^2)*a[i]+1/6*(dt^2)*a[i+1] # Linear
-    # u[i+1] <- u[i]+1/2*dt*(v[i+1]+v[i])# Constant
-  }
-  Umax <- tail(u,1)
-  return(u[-1])
 }
 
 .getFFT <- function(.SD){
