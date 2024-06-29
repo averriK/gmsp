@@ -8,7 +8,7 @@ Description: A collection of tools for processing ground motion signals. It incl
 License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Imports:
     data.table,
     pracma,

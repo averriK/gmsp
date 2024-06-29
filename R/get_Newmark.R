@@ -16,6 +16,7 @@
 #' @examples
 get_Newmark <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
   on.exit(expr={rm(list = ls())}, add = TRUE)
+  if(is.null(AT)) {return(NULL)}
   PGA <- max(abs(AT))
   if(PGA==0) {return(NULL)}
   ky <- kh*PGA/g
