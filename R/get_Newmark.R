@@ -35,7 +35,7 @@ get_Newmark <- function(TSL,TargetUnits="mm",kh_values=c(0.01,0.02,0.05, 0.10, 0
 }
 
 
-.get_DN <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
+.get_ND <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if(is.null(AT)) {return(NULL)}
   PGA <- max(abs(AT))
