@@ -247,6 +247,8 @@
   )
 }
 
+
+
 .getFFT <- function(.SD){
   FFT <- spectral::spec.fft(y=.SD$Y,x=.SD$X,center = TRUE)
   data.table(f=FFT$fx,PSD=(FFT$PSD))

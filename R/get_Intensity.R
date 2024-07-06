@@ -2,16 +2,13 @@
 #'
 #' @param TSL data.table
 #' @param TargetUnits character
-#' @param kh_values vector
 #'
 #' @return
 #' @export
 #'
 #' @examples
 
-
-
-get_Intensity <- function(TSL,TargetUnits="mm",kh_values=c(0.01,0.02,0.05, 0.10, 0.15, 0.20, 0.25, 0.30,0.35, 0.40,0.45, 0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.90,1.00,1.25,1.50,1.75,2.00,2.50,3.00)){
+get_Intensity <- function(TSL,TargetUnits="mm"){
   on.exit(expr={rm(list = ls())}, add = TRUE)
   . <- NULL
   # Arias Intensity -------------------------------------------------------------
@@ -29,17 +26,7 @@ get_Intensity <- function(TSL,TargetUnits="mm",kh_values=c(0.01,0.02,0.05, 0.10,
   ARMS <- TSL[ID=="AT",.(ID="ARMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
   VRMS <- TSL[ID=="VT",.(ID="VRMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
   DRMS <- TSL[ID=="DT",.(ID="DRMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
-  
-  
-  # Newmark Displacements  -------------------------------------------------------------
-  
-  NDT <- rbindlist(
-    sapply(kh_values, function(kh) {
-      TSL[ID == "AT", .(
-        ID = sprintf("DN%02d", round(kh * 100)), 
-        value = gmsp::get_Newmark(AT = s, t = t, kh = kh, FULL = FALSE)), 
-        by = .(RecordSN, DIR, OCID)]}, simplify = FALSE))
-  
+
   # Sample properties -------------------------------------------------------------
   NP <- TSL[ID=="AT",.(ID="NP",value=length(s)),by=.(RecordSN,DIR,OCID)]
   dt <- TSL[ID=="AT",.(ID="dt",value=mean(diff(t))),by=.(RecordSN,DIR,OCID)]
@@ -70,15 +57,13 @@ get_Intensity <- function(TSL,TargetUnits="mm",kh_values=c(0.01,0.02,0.05, 0.10,
   TmD <- TSL[ID=="DT",.(ID="TmD",value=.getTm(s,t=t,fmin=0.1,fmax=25)),by=.(RecordSN,DIR,OCID)]
   
   # Build Intensity Table
-  ITL <- rbindlist(list(IA,IAu,IAd,PGA,PGV,PGD,ARMS,VRMS,DRMS,NDT,NP,dt,Fs,ATo,VTo,DTo,ATn,VTn,DTn,AZC,VZC,DZC,Dmax,D0595,D2080,D0575,TmA,TmV,TmD), use.names = TRUE)
+  ITL <- rbindlist(list(IA,IAu,IAd,PGA,PGV,PGD,ARMS,VRMS,DRMS,NP,dt,Fs,ATo,VTo,DTo,ATn,VTn,DTn,AZC,VZC,DZC,Dmax,D0595,D2080,D0575,TmA,TmV,TmD), use.names = TRUE)
   ITW <- dcast(ITL, RecordSN + OCID + DIR ~ ID, value.var = "value")
   return(list(ITL=ITL,ITW=ITW))
 }
 
 
-.getG <- function(TargetUnits,g= 9806.650) {
-  switch (tolower(TargetUnits),"m" = g/1000,"cm" = g/10,"mm" = g/1,NULL)
-}
+
 
 .getAI <- function(x,t,g=NULL,TargetUnits="mm"){
   if(is.null(g) & !is.null(TargetUnits)){g <- .getG(TargetUnits)}
