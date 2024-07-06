@@ -248,8 +248,130 @@
 }
 
 
+.get_ND <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  if(is.null(AT)) {return(NULL)}
+  PGA <- max(abs(AT))
+  if(PGA==0) {return(NULL)}
+  ky <- kh*PGA/g
+  ag <- AT/g
+  NP <- length(ag)
+  if(is.null(t) & !is.null(dt)){
+    t <- seq(0,(NP-1)*dt,by=dt)
+  }
+  if(is.null(dt) & !is.null(t)) {
+    dt <- mean(diff(t))
+  } 
+  
+  a <- double(NP+1)
+  v <- double(NP+1)
+  u <- double(NP+1)
+  for (i in 1:NP){
+    if (v[i]<TOL){
+      if (abs(ag[i])>ky){
+        n <- ag[i]/abs(ag[i])
+      }
+      else {
+        n <- ag[i]/ky
+      }
+    }
+    else {
+      n <- 1
+    }
+    a[i+1] <- (ag[i]-n*ky)*g
+    # V(i+1)=V(i)+(1/2)*Dt*A(i)+1/2*Dt*A(i+1);
+    v[i+1] <- v[i]+1/2*dt*(a[i+1]+a[i]) #ok
+    if (v[i+1]<TOL){
+      v[i+1] <- 0
+      a[i+1] <- 0
+    }
+    # U(i+1)=U(i)+Dt*V(i)+(0.5-B)*(Dt^2)*A(i)+B*(Dt^2)*A(i+1);
+    u[i+1] <- u[i]+dt*v[i]+(1/3)*(dt^2)*a[i]+1/6*(dt^2)*a[i+1] # Linear
+    # u[i+1] <- u[i]+1/2*dt*(v[i+1]+v[i])# Constant
+  }
+  
+  # return(Umax)
+  if(FULL){
+    return(u[1:NP])
+  }
+  else {
+    Umax <- tail(u,1)
+    return(Umax)
+  }
+}
+
+
+
 
 .getFFT <- function(.SD){
   FFT <- spectral::spec.fft(y=.SD$Y,x=.SD$X,center = TRUE)
   data.table(f=FFT$fx,PSD=(FFT$PSD))
+}
+
+
+
+.getAI <- function(x,t,g=NULL,TargetUnits="mm"){
+  if(is.null(g) & !is.null(TargetUnits)){g <- .getG(TargetUnits)}
+  dt <- mean(diff(t))
+  as.numeric(x %*% x)*dt*pi/(2*g)
+}
+
+.getRMS <- function(x){
+  sqrt(1/length(x)*as.numeric(x%*%x))}
+
+.getPeak <- function(x){
+  max(abs(x))
+}
+
+
+.getZC <- function(x){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  NP <- length(x)
+  ZC <- 0
+  if(NP>2){ZC <- sum(sign( x[2:NP])== -sign(x[1:(NP-1)]))}
+  return(ZC)
+}
+
+.getCRC <- function(x){toupper(digest(object=x,algo="crc32"))}
+
+.getHBD <- function(x,t,a=0.05,b=0.95,g=9806.650) {
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  dt <-mean(diff(t))
+  IA <- dt*(x%*%x)*pi/(2*g)
+  SumIA <- pi*dt*cumsum(x^2)
+  A <- a*2*g*IA
+  B <- b*2*g*IA
+  k <- 1
+  while (SumIA[k]<A){
+    k <- k+1
+  }
+  ta <- t[k]
+  while (SumIA[k]<B){
+    k <- k+1
+  }
+  tb <- t[k]
+  D  <- tb-ta
+  return(D)
+}
+.getTm <- function(x,t,fmin = 0,fmax = Inf){
+  on.exit(expr={rm(list = ls())}, add = TRUE)
+  if(max(abs(x))==0) {return(0)}
+  NP <- length(x)
+  dt <- mean(diff(t))
+  Fs <- 1/dt
+  # NFFT <- nextn(NP,factors = 2)
+  AW <- 1/NP*fft(x ,inverse = FALSE)
+  df <- Fs/NP
+  NUP=ceiling(NP/2)+1
+  fs <- seq(from=1,to=NUP)*df
+  fmin <- max(fmin,min(fs))
+  fmax <- min(fmax,max(fs))
+  # idx <- inrange(fs[1:NUP],lower=max(fmin,min(fs)),upper= min(fmax,max(fs)))
+  idx <- fs>=fmin & fs<=fmax
+  Co   <- sqrt(Re(AW[1:NUP]*Conj(AW[1:NUP])))
+  # f1 <- max(fmin,min(fs))
+  # f2 <- min(fmax,max(fs))
+  # ix <- fs[1:NUP] %inrange% c(f1,(f2+fs[2]))
+  Tm <-sum(Co[idx]^2/fs[idx])/sum(Co[idx]^2)
+  return(Tm)
 }
