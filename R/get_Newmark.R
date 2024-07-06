@@ -15,21 +15,14 @@ get_Newmark <- function(ATL,TargetUnits="mm",kh_values=c(0.01,0.02,0.05, 0.10, 0
   on.exit(expr={rm(list = ls())}, add = TRUE)
   . <- NULL
   g <- .getG(TargetUnits) #GMSP$g
-  
-  
-  
   # Newmark Displacements  -------------------------------------------------------------
   
-  ND <- rbindlist(
+  NDL <- rbindlist(
     sapply(kh_values, function(kh) {
       ATL[, .(
         ID = sprintf("DN%02d", round(kh * 100)), 
         value = .get_ND(AT = s, t = t, kh = kh, FULL = FALSE)), 
         by = .(RecordSN, DIR, OCID)]}, simplify = FALSE))
-  PGA <- ATL[,.(ID="PGA",value=.getPeak(s)),by=.(RecordSN,DIR,OCID)]
-  
-  
-  # Build Intensity Table
   NDW <- dcast(NDL, RecordSN + OCID + DIR ~ ID, value.var = "value")
   return(list(NDL=NDL,NDW=NDW))
 }
