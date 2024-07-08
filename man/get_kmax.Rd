@@ -10,6 +10,8 @@ get_kmax(.SD, TargetUnits = "mm", interval = TRUE)
 \item{.SD}{data.table}
 
 \item{TargetUnits}{character}
+
+\item{interval}{boolean}
 }
 \description{
 Title
