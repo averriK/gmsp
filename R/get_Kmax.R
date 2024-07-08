@@ -2,6 +2,7 @@
 #'
 #' @param .SD data.table
 #' @param TargetUnits character
+#' @param interval boolean
 #'
 #' @return
 #' @export
