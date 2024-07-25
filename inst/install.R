@@ -5,9 +5,9 @@ devtools::document()
 devtools::check()
 remove.packages("gmsp")
 # devtools::build()
-# devtools::install()
+devtools::install()
 ## Commit Push
 # remotes::install_github("averrik/gmsp",auth_token = Sys.getenv("PAT"))
-remotes::install_github("averriK/gmsp")
+# remotes::install_github("averriK/gmsp")
 
 

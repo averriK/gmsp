@@ -22,7 +22,6 @@ Imports:
     spectral,
     hht,
     EMD,
-    MASS,
     expm
 Depends: 
     R (>= 4.0)
