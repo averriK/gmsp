@@ -26,7 +26,7 @@ get_Intensity <- function(TSL,TargetUnits="mm"){
   ARMS <- TSL[ID=="AT",.(ID="ARMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
   VRMS <- TSL[ID=="VT",.(ID="VRMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
   DRMS <- TSL[ID=="DT",.(ID="DRMS",value=.getRMS(s)),by=.(RecordSN,DIR,OCID)]
-
+  
   # Sample properties -------------------------------------------------------------
   NP <- TSL[ID=="AT",.(ID="NP",value=length(s)),by=.(RecordSN,DIR,OCID)]
   dt <- TSL[ID=="AT",.(ID="dt",value=mean(diff(t))),by=.(RecordSN,DIR,OCID)]
@@ -56,8 +56,21 @@ get_Intensity <- function(TSL,TargetUnits="mm"){
   TmV <- TSL[ID=="VT",.(ID="TmV",value=.getTm(s,t=t,fmin=0.1,fmax=25)),by=.(RecordSN,DIR,OCID)]
   TmD <- TSL[ID=="DT",.(ID="TmD",value=.getTm(s,t=t,fmin=0.1,fmax=25)),by=.(RecordSN,DIR,OCID)]
   
+  # Damage Indices -------------------------------------------------------------
+  AUX <- ARMS[,.(RecordSN,DIR,OCID,ARMS=value)][D0595[,.(RecordSN,DIR,OCID,D0595=value)],on=.(RecordSN,DIR,OCID)]
+  PPI <- AUX[,.(RecordSN,DIR,OCID,ID="PPI",value=sqrt((ARMS^3)*D0595))]
+  
+  AUX <- IA[,.(RecordSN,DIR,OCID,IA=value)][D0595[,.(RecordSN,DIR,OCID,D0595=value)],on=.(RecordSN,DIR,OCID)]
+  EPI <- AUX[,.(RecordSN,DIR,OCID,ID="EPI",value=0.9/pi*IA*2*g*D0595)]
+  
+  
+  AUX <- AZC[,.(RecordSN,DIR,OCID,AZC=value)][Dmax[,.(RecordSN,DIR,OCID,Dmax=value)],on=.(RecordSN,DIR,OCID)][IA[,.(RecordSN,DIR,OCID,IA=value)],on=.(RecordSN,DIR,OCID)]
+  PDI <- AUX[,.(RecordSN,DIR,OCID,ID="PDI",value=IA*(Dmax/AZC)^2)]
+  
+  
+  
   # Build Intensity Table
-  ITL <- rbindlist(list(IA,IAu,IAd,PGA,PGV,PGD,ARMS,VRMS,DRMS,NP,dt,Fs,ATo,VTo,DTo,ATn,VTn,DTn,AZC,VZC,DZC,Dmax,D0595,D2080,D0575,TmA,TmV,TmD), use.names = TRUE)
+  ITL <- rbindlist(list(IA,IAu,IAd,PGA,PGV,PGD,ARMS,VRMS,DRMS,NP,dt,Fs,ATo,VTo,DTo,ATn,VTn,DTn,AZC,VZC,DZC,Dmax,D0595,D2080,D0575,TmA,TmV,TmD,PPI,EPI,PDI), use.names = TRUE)
   ITW <- dcast(ITL, RecordSN + OCID + DIR ~ ID, value.var = "value")
   return(list(ITL=ITL,ITW=ITW))
 }
