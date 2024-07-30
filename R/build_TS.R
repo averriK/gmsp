@@ -78,7 +78,7 @@ build_TS <- function(
   # Export RAW record scaled to TargetUnits
   
   RTSW <- data.table(ts=ts, Units=TargetUnits,X)
-  setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
+  # setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
   
   ## Scale record ----
   if(tolower(Scale)=="relative"){

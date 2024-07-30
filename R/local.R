@@ -56,3 +56,4 @@ NIMF  <- NULL
 NIT  <- NULL
 fm <- Tm <- DATA <- offset <- NULL
 Dn <- ky <- kmax95 <- kmax05 <- kh95 <- kh05 <- NULL
+PPI <- EPI <- PDI <- NULL
