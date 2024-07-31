@@ -6,13 +6,13 @@
 #' @param kh numeric
 #' @param TOL numeric
 #' @param g numeric
-#' @param FULL boolean
+#' @param full boolean
 #'
 #' @return
 #' @export
 #'
 #' @examples
-get_ND <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
+get_ND <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,full=TRUE) {
   on.exit(expr={rm(list = ls())}, add = TRUE)
   if(is.null(AT)) {return(NULL)}
   PGA <- max(abs(AT))
@@ -55,7 +55,7 @@ get_ND <- function(AT,t=NULL,dt=NULL,kh,TOL=1e-3, g=9806.650,FULL=TRUE) {
   }
   
   # return(Umax)
-  if(FULL){
+  if(full==TRUE){
     return(u[1:NP])
   }
   else {

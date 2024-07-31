@@ -22,7 +22,7 @@ get_Newmark <- function(ATL,TargetUnits="mm",kh=c(0.01,0.02,0.05, 0.10, 0.15, 0.
     sapply(kh, function(x) {
       ATL[, .(
         ID = sprintf("DN%02d", round(x * 100)), 
-        value = get_ND(AT = s, t = t, kh = x, FULL = full)), 
+        value = get_ND(AT = s, t = t, kh = x, full = full)), 
         by = .(RecordSN, DIR, OCID)]}, simplify = FALSE))
   NDW <- dcast(NDL, RecordSN + OCID + DIR ~ ID, value.var = "value")
   return(list(NDL=NDL,NDW=NDW))
