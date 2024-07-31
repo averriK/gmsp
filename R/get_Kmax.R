@@ -11,11 +11,11 @@
 #' @export
 #'
 #' @examples
-get_kmax <- function(.SD,TargetUnits="mm",interval=TRUE){
+get_kmax <- function(.SD,TargetUnits="mm",interval=FALSE){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
   . <- NULL
   
-  AUX <- .SD[,.(PGA,ky=as.numeric(gsub("DN", "", ID))*PGA/100,Dn=round(value,4))][Dn>0 & ky>0]
+  AUX <- .SD[,.(PGA,ky,Dn)][Dn>0 & ky>0]
   DATA <- AUX[,.(LnKy=log(ky),LnDn=log(Dn),Dn,IDn=1/Dn)]
   MDL <- lm(data=DATA,LnKy~.)
   

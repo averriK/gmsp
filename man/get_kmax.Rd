@@ -4,7 +4,7 @@
 \alias{get_kmax}
 \title{Title}
 \usage{
-get_kmax(.SD, TargetUnits = "mm", interval = TRUE)
+get_kmax(.SD, TargetUnits = "mm", interval = FALSE)
 }
 \arguments{
 \item{.SD}{data.table}
