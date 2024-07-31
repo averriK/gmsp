@@ -4,14 +4,12 @@
 \alias{get_kmax}
 \title{Title}
 \usage{
-get_kmax(.SD, TargetUnits = "mm", interval = FALSE)
+get_kmax(.SD, TargetUnits = "mm")
 }
 \arguments{
 \item{.SD}{data.table}
 
 \item{TargetUnits}{character}
-
-\item{interval}{boolean}
 }
 \description{
 Title
