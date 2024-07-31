@@ -4,7 +4,7 @@
 \alias{get_ND}
 \title{get_ND}
 \usage{
-get_ND(AT, t = NULL, dt = NULL, kh, TOL = 0.001, g = 9806.65, FULL = TRUE)
+get_ND(AT, t = NULL, dt = NULL, kh, TOL = 0.001, g = 9806.65, full = TRUE)
 }
 \arguments{
 \item{AT}{data.table}
@@ -19,7 +19,7 @@ get_ND(AT, t = NULL, dt = NULL, kh, TOL = 0.001, g = 9806.65, FULL = TRUE)
 
 \item{g}{numeric}
 
-\item{FULL}{boolean}
+\item{full}{boolean}
 }
 \description{
 get_ND
