@@ -2,7 +2,6 @@
 #'
 #' @param .SD data.table
 #' @param TargetUnits character
-#' @param interval boolean
 #'
 #' @return
 #' 
@@ -11,7 +10,7 @@
 #' @export
 #'
 #' @examples
-get_kmax <- function(.SD,TargetUnits="mm",interval=FALSE){
+get_kmax <- function(.SD,TargetUnits="mm"){
   on.exit(expr = {rm(list = ls())}, add = TRUE)
   . <- NULL
   
@@ -29,14 +28,6 @@ get_kmax <- function(.SD,TargetUnits="mm",interval=FALSE){
   RSS <- DATA$LnKy - Yp
   RMSE <- sqrt(mean(RSS^2))
   R2 <- summary(MDL)$adj.r.squared |> round(digits = 3)
-  if(interval==TRUE){
-    kmax95 <- exp(LnKmax[,"upr"]) |> round(digits = 3)
-    kmax05 <- exp(LnKmax[,"lwr"]) |> round(digits = 3)
-    kh95 <- (100*kmax95/PGA) |> round(digits = 1)
-    kh05 <- (100*kmax05/PGA) |> round(digits = 1)
-    KIT <- data.table(Da,kmax05,kmax,kmax95,kh05,kh,kh95,R2,RMSE,kmax_Units=TargetUnits)
-  } else{
-    KIT <- data.table(Da,kmax,kh,R2,RMSE,kmax_Units=TargetUnits)
-  }
+  KIT <- data.table(Da,kmax,kh,R2,RMSE,kmax_Units=TargetUnits)
   return(KIT[kh>0 & kmax>0 & kmax<Inf])
 }
