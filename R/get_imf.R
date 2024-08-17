@@ -84,9 +84,7 @@ get_imf <- function(.x=NULL, s=NULL, t=NULL, dt=NULL, method="emd", boundary="wa
   }
   
   # Add signal and residue as the last columns of IMF
-  IMF <- cbind(IMF, signal=s, residue=RES)
-  names(IMF) <- c(paste0("IMF", seq_len(ncol(IMF)-2)), "signal", "residue")
-  
+  IMF <- cbind(IMF, signal=DT$s, residue=RES)
   # Zero padding
   i <- as.integer(DT$t[1] / dt)
   j <- as.integer(last(DT$t) / dt)
@@ -94,6 +92,9 @@ get_imf <- function(.x=NULL, s=NULL, t=NULL, dt=NULL, method="emd", boundary="wa
   OB <- data.table(matrix(0, nrow=n-j, ncol=ncol(IMF)))
   OA <- data.table(matrix(0, nrow=i-1, ncol=ncol(IMF)))
   IMF <- rbindlist(list(OA, IMF, OB), use.names=FALSE)
+  
+  # Set names
+  names(IMF) <- c(paste0("IMF", seq_len(ncol(IMF)-2)), "signal", "residue")
   
   TSW <- data.table(t, IMF)
   ivars <- c("t")
