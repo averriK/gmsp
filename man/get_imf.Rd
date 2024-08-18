@@ -7,7 +7,7 @@
 get_imf(
   .x = NULL,
   s = NULL,
-  t = NULL,
+  ts = NULL,
   dt = NULL,
   method = "emd",
   boundary = "wave",
@@ -24,7 +24,7 @@ get_imf(
 
 \item{s}{numeric vector}
 
-\item{t}{numeric vector}
+\item{ts}{numeric vector}
 
 \item{dt}{numeric}
 

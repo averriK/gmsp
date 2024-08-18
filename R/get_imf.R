@@ -3,7 +3,7 @@
 #' 
 #' @param .x data.table
 #' @param s numeric vector
-#' @param t numeric vector
+#' @param ts numeric vector
 #' @param dt numeric
 #' @param method string
 #' @param boundary string
@@ -29,78 +29,77 @@
 #'
 #' @examples
 #'
-get_imf <- function(.x=NULL, s=NULL, t=NULL, dt=NULL, method="emd", boundary="wave", max.imf=15, noise.type="gaussian", noise.amp=0.5e-7, trials=10, stop.rule="type5", verbose=FALSE) {
+get_imf <- function(.x=NULL, s=NULL, ts=NULL, dt=NULL, method="emd", boundary="wave", max.imf=15, noise.type="gaussian", noise.amp=0.5e-7, trials=10, stop.rule="type5", verbose=FALSE) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
-  . <- NULL
+  
   stopifnot(tolower(method) %in% c("emd", "eemd", "ceemd"))
   stopifnot(tolower(stop.rule) %in% c("type1", "type2", "type3", "type4", "type5"))
   stopifnot(tolower(boundary) %in% c("none", "wave", "symmetric", "periodic", "evenodd"))
   stopifnot(tolower(noise.type) %in% c("uniform", "gaussian"))
-  
+
   if (is.null(s) && is.null(.x)) {
     stop("No acceleration data provided.")
   }
   if (!is.null(.x)) {
     s <- .x$s
-    t <- .x$t
+    ts <- .x$t
   }
-  if (is.null(t) && is.null(.x) && is.null(dt)) {
+  if (is.null(ts) && is.null(.x) && is.null(dt)) {
     stop("No time data provided.")
   }
   
-  if (!is.null(t)) {
-    dt <- diff(t) |> mean()
+  if (!is.null(ts)) {
+    dt <- mean(diff(ts))
   }
   
-  n <- length(s)
-  stopifnot(n > 4)
+  ts <- seq(0, (length(s)-1)*dt, by=dt)
   
-  t <- seq(0, (n-1)*dt, by=dt)
-  
-  DT <- data.table(t=t, s=s)
+  DT <- data.table(t=ts, s=s)
   DT <- .trimZeros(DT)
+  n <- nrow(DT)
+  rm(s)
   
   if (tolower(method) == "emd") {
     AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf, stoprule=stop.rule)
-    IMF <- AUX$imf |> as.data.table()
-    RES <- AUX$residue |> as.vector() |> unname()
+    IMF <- as.data.table(AUX$imf)
+    RES <- AUX$residue
   }
   
   if (tolower(method) == "eemd") {
-    AUX <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf, stoprule=stop.rule)
-    nimf <- AUX$nimf
+    nimf <- EMD::emd(xt=DT$s, tt=DT$t, boundary=boundary, max.imf=max.imf, stoprule=stop.rule)$nimf
     DIR <- tempdir(check = TRUE)
     hht::EEMD(sig=DT$s, tt=DT$t, nimf=nimf, max.imf=max.imf, boundary=boundary, noise.amp=noise.amp, noise.type=noise.type, trials=trials, stop.rule=stop.rule, trials.dir=DIR, verbose=verbose)
     AUX <- EEMDCompile(trials.dir=DIR, trials=trials, nimf=nimf) |> suppressWarnings()
     unlink(DIR, force=TRUE, recursive=TRUE)
-    IMF <- AUX$averaged.imfs |> as.data.table()
-    RES <- AUX$averaged.residue |> unname()
+    IMF <- as.data.table(AUX$averaged.imfs)
+    RES <- AUX$averaged.residue
   }
   
   if (tolower(method) == "ceemd") {
     AUX <- hht::CEEMD(sig=DT$s, tt=DT$t, noise.amp=noise.amp, noise.type=noise.type, trials=trials, stop.rule=stop.rule, verbose=verbose)
-    IMF <- AUX$imf |> as.data.table()
-    RES <- AUX$residue |> unname()
+    IMF <- as.data.table(AUX$imf)
+    RES <- AUX$residue
   }
   
+  
+  # Zero padding to ensure IMF has the same length as s and t
+  if (nrow(IMF) < nrow(DT)) {
+    pad_length <- nrow(DT) - nrow(IMF)
+    padding <- data.table(matrix(0, nrow=pad_length, ncol=ncol(IMF)))
+    setnames(padding, names(IMF))
+    IMF <- rbind(IMF, padding)
+  }
+  
+  # Rename columns before adding signal and residue
+  setnames(IMF, c(paste0("IMF", seq_len(ncol(IMF)))))
+  
   # Add signal and residue as the last columns of IMF
-  IMF <- cbind(IMF, signal=DT$s, residue=RES)
-  # Zero padding
-  i <- as.integer(DT$t[1] / dt)
-  j <- as.integer(last(DT$t) / dt)
-  
-  OB <- data.table(matrix(0, nrow=n-j, ncol=ncol(IMF)))
-  OA <- data.table(matrix(0, nrow=i-1, ncol=ncol(IMF)))
-  IMF <- rbindlist(list(OA, IMF, OB), use.names=FALSE)
-  
-  # Set names
-  names(IMF) <- c(paste0("IMF", seq_len(ncol(IMF)-2)), "signal", "residue")
-  
-  TSW <- data.table(t, IMF)
+  TSW <- data.table(t=DT$t, signal=DT$s, IMF,residue=RES)
+  #
   ivars <- c("t")
   mvars <- colnames(TSW[, -c("t")])
-  AUX <- data.table::melt(TSW, id.vars=ivars, measure.vars=mvars) |> na.omit()
-  TSL <- AUX[, .(t=t, s=value, IMF=variable)]
+  AUX <- melt(TSW, id.vars=ivars, measure.vars=mvars)
+  TSL <- AUX[, list(t=t, s=value, IMF=variable)]
   
   return(TSL)
 }
