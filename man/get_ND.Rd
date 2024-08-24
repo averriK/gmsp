@@ -21,6 +21,9 @@ get_ND(AT, t = NULL, dt = NULL, kh, TOL = 0.001, g = 9806.65, full = TRUE)
 
 \item{full}{boolean}
 }
+\value{
+list
+}
 \description{
 get_ND
 }

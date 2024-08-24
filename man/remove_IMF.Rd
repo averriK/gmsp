@@ -15,6 +15,9 @@ remove_IMF(X, EMD, removeIMF1 = 0, removeIMFn = 0)
 
 \item{removeIMFn}{integer. Number of IMFs to remove from the end}
 }
+\value{
+list
+}
 \description{
 Title
 }

@@ -9,7 +9,9 @@ build_TS(
   ts = NULL,
   dt = NULL,
   Units,
-  OrderTS = 2,
+  DetrendAT = FALSE,
+  DetrendVT = FALSE,
+  DetrendDT = FALSE,
   Fmax = 16,
   kNyq = 3.125,
   Resample = TRUE,
@@ -19,7 +21,8 @@ build_TS(
   OVLP = 75,
   Astop.AT = 1e-04,
   Apass.AT = 0.001,
-  Scale = "relative"
+  PreserveMaximum = FALSE,
+  Output = NULL
 )
 }
 \arguments{
@@ -31,7 +34,11 @@ build_TS(
 
 \item{Units}{character}
 
-\item{OrderTS}{integer}
+\item{DetrendAT}{boolean}
+
+\item{DetrendVT}{boolean}
+
+\item{DetrendDT}{boolean}
 
 \item{Fmax}{integer}
 
@@ -51,7 +58,9 @@ build_TS(
 
 \item{Apass.AT}{numeric}
 
-\item{Scale}{character}
+\item{PreserveMaximum}{boolean}
+
+\item{Output}{character}
 }
 \value{
 list

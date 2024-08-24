@@ -14,13 +14,11 @@
 #' @import data.table
 #' @importFrom stats filter
 #' @importFrom signal sgolayfilt
-#' @importFrom signal convolve
 #' @importFrom zoo rollmean
 #' @importFrom stats smooth.spline
 #' @importFrom stats predict
 #' @importFrom stats dnorm
 #' @importFrom stats spline
-#' @importFrom stats convolve
 #'
 #' @examples
 #' 

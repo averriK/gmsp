@@ -8,7 +8,7 @@
 #' @param g numeric
 #' @param full boolean
 #'
-#' @return
+#' @return list
 #' @export
 #'
 #' @examples
