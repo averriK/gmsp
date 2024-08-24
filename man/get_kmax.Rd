@@ -11,6 +11,9 @@ get_kmax(.SD, TargetUnits = "mm")
 
 \item{TargetUnits}{character}
 }
+\value{
+data.table
+}
 \description{
 Title
 }

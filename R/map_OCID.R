@@ -2,7 +2,7 @@
 #'
 #' @param .x data.table
 #'
-#' @return
+#' @return list
 #' @export
 #' 
 #' @import data.table 

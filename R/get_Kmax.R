@@ -3,7 +3,7 @@
 #' @param .SD data.table
 #' @param TargetUnits character
 #'
-#' @return
+#' @return data.table
 #' 
 #' @import data.table
 #' @importFrom stats lm

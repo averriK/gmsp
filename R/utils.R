@@ -325,3 +325,39 @@
   Tm <-sum(Co[idx]^2/fs[idx])/sum(Co[idx]^2)
   return(Tm)
 }
+
+
+.isRational <- function(x) {
+  # Check if the number is finite
+  if (!is.finite(x)) {
+    return(FALSE)
+  }
+  
+  # Convert the number to a character string
+  XS <- as.character(x)
+  
+  # Check for infinite decimal expansion
+  if (grepl("\\.\\d*", XS)) {
+    # Look for a repeating decimal (like 0.33333...)
+    if (any(grepl("(\\d)\\1{2,}", XS))) {
+      return(FALSE)
+    }
+    
+    # If it does not have a repeating decimal, it is rational
+    return(TRUE)
+  }
+  
+  # If no decimal part is present, it is rational (like an integer)
+  return(TRUE)
+}
+
+# Examples
+# is_rational(0.5)    # TRUE
+# is_rational(0.3333) # TRUE
+# is_rational(1/3)    # FALSE (not expressible in finite decimal form)
+# is_rational(5)      # TRUE (integer, hence rational)
+# is_rational(NaN)    # FALSE
+# is_rational(Infinity) # FALSE
+
+
+

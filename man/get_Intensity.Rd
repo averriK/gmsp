@@ -11,6 +11,9 @@ get_Intensity(TSL, TargetUnits = "mm")
 
 \item{TargetUnits}{character}
 }
+\value{
+list
+}
 \description{
 Title
 }

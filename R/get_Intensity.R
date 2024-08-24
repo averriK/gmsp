@@ -3,7 +3,7 @@
 #' @param TSL data.table
 #' @param TargetUnits character
 #'
-#' @return
+#' @return list
 #' @export
 #'
 #' @examples

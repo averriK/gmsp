@@ -9,6 +9,9 @@ map_OCID(.x)
 \arguments{
 \item{.x}{data.table}
 }
+\value{
+list
+}
 \description{
 Title
 }

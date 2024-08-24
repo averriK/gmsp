@@ -6,7 +6,7 @@
 #' @param removeIMF1 integer. Number of IMFs to remove from the beginning
 #' @param removeIMFn integer. Number of IMFs to remove from the end
 #'
-#' @return
+#' @return list
 #' @export
 #'
 #' @examples
