@@ -59,12 +59,7 @@ build_TS <- function(
   stopifnot(NP>=NW)
   if(!is.null(ts)){
     dts <- diff(ts)
-    if(sd(dts)>0){
-      warning("Non-uniform time series. Using mean(dt) as time step.")
-      dt <- mean(dts)
-    } else {
-      dt <- dts[1]
-    }
+    dt <- mean(dts)
   }
   
   # Check if dt is a rational number
