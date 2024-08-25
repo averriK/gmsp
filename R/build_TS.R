@@ -7,16 +7,15 @@
 #' @param Fmax integer
 #' @param kNyq numeric
 #' @param Resample boolean
-#' @param LowPass boolean
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
-#' @param Astop.AT numeric
-#' @param Apass.AT numeric
+#' @param AstopAT numeric
+#' @param ApassAT numeric
 #' @param DetrendAT boolean
 #' @param DetrendVT boolean
 #' @param DetrendDT boolean
-#' @param PreserveMaximum boolean
+#' @param Normalize boolean
 #' @param Output character
 #'
 #' @return list
@@ -43,13 +42,12 @@ build_TS <- function(
     Fmax = 16,
     kNyq=3.125, #>2.5
     Resample = TRUE,
-    LowPass = TRUE,
     TargetUnits = "mm",
     NW = 1024,
     OVLP = 75,
-    Astop.AT=1e-4,
-    Apass.AT=1e-3,
-    PreserveMaximum = FALSE,
+    AstopAT=1e-4,
+    ApassAT=1e-3,
+    Normalize = FALSE,
     Output=NULL) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
   . <- NULL
@@ -95,7 +93,7 @@ build_TS <- function(
   # setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
   
   ## Scale record ----
-  if(PreserveMaximum==TRUE){
+  if(Normalize==TRUE){
     Ao <- apply(X, 2, function(x) { max(abs(x))})
     X <-X[, .(sapply(.SD, function(x){x/max(abs(x))}))]
   }
@@ -116,7 +114,7 @@ build_TS <- function(
   # browser()
   ## Case #2. Acceleration Time Histories ----
   
-  Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=Astop.AT,Apass=Apass.AT)}))]
+  Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=AstopAT,Apass=ApassAT)}))]
   AT <- X
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
@@ -164,7 +162,7 @@ build_TS <- function(
   }
   ## Taper Zeros ----
   # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=Astop.AT,Apass=Apass.AT)}))]
+  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=AstopAT,Apass=ApassAT)}))]
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
@@ -188,8 +186,8 @@ build_TS <- function(
  
   
   
-  ## Restore Maximum ----
-  if(PreserveMaximum==TRUE){
+  ## Normalize Maximum ----
+  if(Normalize==TRUE){
     AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
     VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
     DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Ao[i]})]
