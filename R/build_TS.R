@@ -114,7 +114,7 @@ build_TS <- function(
   # browser()
   ## Case #2. Acceleration Time Histories ----
   
-  Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=AstopAT,Apass=ApassAT)}))]
+  Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
   AT <- X
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
@@ -162,7 +162,7 @@ build_TS <- function(
   }
   ## Taper Zeros ----
   # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=AstopAT,Apass=ApassAT)}))]
+  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
