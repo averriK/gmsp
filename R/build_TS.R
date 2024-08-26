@@ -73,11 +73,12 @@ build_TS <- function(
   
   
   ## Scale Units  ----
+  SFU <- 1
+  
   if (grepl(Units, pattern = "[///+]")) {
     Units <- (str_split(Units, pattern = "[///+]") |> unlist())[1]
   }
   if (!(tolower(Units) %in% c("mm", "cm", "m", "gal", "g"))) return(NULL)
-  
   if (tolower(Units) != TargetUnits) {
     SFU <- .getSF(SourceUnits = tolower(Units), TargetUnits = TargetUnits)
     X <- X[,.(sapply(.SD, function(x) {x * SFU}))]

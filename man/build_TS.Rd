@@ -15,13 +15,12 @@ build_TS(
   Fmax = 16,
   kNyq = 3.125,
   Resample = TRUE,
-  LowPass = TRUE,
   TargetUnits = "mm",
   NW = 1024,
   OVLP = 75,
-  Astop.AT = 1e-04,
-  Apass.AT = 0.001,
-  PreserveMaximum = FALSE,
+  AstopAT = 1e-04,
+  ApassAT = 0.001,
+  Normalize = FALSE,
   Output = NULL
 )
 }
@@ -46,19 +45,17 @@ build_TS(
 
 \item{Resample}{boolean}
 
-\item{LowPass}{boolean}
-
 \item{TargetUnits}{character Units}
 
 \item{NW}{integer Windows Length}
 
 \item{OVLP}{integer}
 
-\item{Astop.AT}{numeric}
+\item{AstopAT}{numeric}
 
-\item{Apass.AT}{numeric}
+\item{ApassAT}{numeric}
 
-\item{PreserveMaximum}{boolean}
+\item{Normalize}{boolean}
 
 \item{Output}{character}
 }
