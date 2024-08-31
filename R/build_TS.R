@@ -10,6 +10,7 @@
 #' @param TargetUnits character Units
 #' @param NW integer Windows Length
 #' @param OVLP integer
+#' @param FlatZeros boolean
 #' @param AstopAT numeric
 #' @param ApassAT numeric
 #' @param DetrendAT boolean
@@ -45,6 +46,7 @@ build_TS <- function(
     TargetUnits = "mm",
     NW = 1024,
     OVLP = 75,
+    FlatZeros=FALSE,
     AstopAT=1e-4,
     ApassAT=1e-3,
     Normalize = FALSE,
@@ -65,12 +67,8 @@ build_TS <- function(
     warning("Time step is not a rational number. Rounding to 3 decimal places (max sampling frequency 1kHz)")
     dt <- round(dt,3)
   }
-  
-    
-  ts <- seq(0,(NP-1)*dt,by=dt)
+    ts <- seq(0,(NP-1)*dt,by=dt)
   Fs <- 1 / dt
-  
-  
   
   ## Scale Units  ----
   SFU <- 1
@@ -114,8 +112,12 @@ build_TS <- function(
   }
   # browser()
   ## Case #2. Acceleration Time Histories ----
-  
-  Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
+  if(FlatZeros==TRUE){
+    Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
+  } else {
+    Wo <- X[,.(sapply(.SD, function(x) {rep(1, length(x))}))]
+  }
+ 
   AT <- X
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
@@ -163,7 +165,14 @@ build_TS <- function(
   }
   ## Taper Zeros ----
   # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
-  Wo <- AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
+ 
+  if(FlatZeros==TRUE){
+    Wo <-AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
+  } else {
+    Wo <- AT[,.(sapply(.SD, function(x) {rep(1, length(x))}))]
+  }
+  
+  
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
   DT <- DT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
