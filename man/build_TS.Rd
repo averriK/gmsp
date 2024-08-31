@@ -18,6 +18,7 @@ build_TS(
   TargetUnits = "mm",
   NW = 1024,
   OVLP = 75,
+  FlatZeros = FALSE,
   AstopAT = 1e-04,
   ApassAT = 0.001,
   Normalize = FALSE,
@@ -50,6 +51,8 @@ build_TS(
 \item{NW}{integer Windows Length}
 
 \item{OVLP}{integer}
+
+\item{FlatZeros}{boolean}
 
 \item{AstopAT}{numeric}
 
