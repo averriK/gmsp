@@ -45,7 +45,7 @@ build_TS <- function(
     kNyq=3.125, #>2.5
     Resample = TRUE,
     TargetUnits = "mm",
-    NW = 1024,
+    NW = 128,
     OVLP = 75,
     FlatZeros=FALSE,
     AstopAT=1e-4,
