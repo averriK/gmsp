@@ -21,6 +21,7 @@ build_TS(
   FlatZeros = FALSE,
   AstopAT = 1e-04,
   ApassAT = 0.001,
+  TrimZeros = FALSE,
   Normalize = FALSE,
   Output = NULL
 )
@@ -57,6 +58,8 @@ build_TS(
 \item{AstopAT}{numeric}
 
 \item{ApassAT}{numeric}
+
+\item{TrimZeros}{boolean}
 
 \item{Normalize}{boolean}
 

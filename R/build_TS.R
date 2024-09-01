@@ -13,6 +13,7 @@
 #' @param FlatZeros boolean
 #' @param AstopAT numeric
 #' @param ApassAT numeric
+#' @param TrimZeros boolean
 #' @param DetrendAT boolean
 #' @param DetrendVT boolean
 #' @param DetrendDT boolean
@@ -49,6 +50,7 @@ build_TS <- function(
     FlatZeros=FALSE,
     AstopAT=1e-4,
     ApassAT=1e-3,
+    TrimZeros=FALSE,
     Normalize = FALSE,
     Output=NULL) {
   on.exit(expr = {rm(list = ls())}, add = TRUE)
@@ -179,10 +181,13 @@ build_TS <- function(
   
   
   # Trim Zeros
-  idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
-  AT <- AT[idx]
-  VT <- VT[idx]
-  DT <- DT[idx]
+  if(TrimZeros){
+    idx <- apply(Wo!=0,MARGIN=1,function(x){all(x)})
+    AT <- AT[idx]
+    VT <- VT[idx]
+    DT <- DT[idx]
+  }
+  
   # Fix trend
   if(DetrendAT==TRUE){
     AT <- AT[, .(sapply(.SD, function(x){x-mean(x)}))]
