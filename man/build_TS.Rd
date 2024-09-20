@@ -16,7 +16,7 @@ build_TS(
   kNyq = 3.125,
   Resample = TRUE,
   TargetUnits = "mm",
-  NW = 1024,
+  NW = 128,
   OVLP = 75,
   FlatZeros = FALSE,
   AstopAT = 1e-04,

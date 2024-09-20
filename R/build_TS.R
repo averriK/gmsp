@@ -58,7 +58,16 @@ build_TS <- function(
   X <- copy(x) |> as.data.table()
   
   NP <- nrow(X)
-  stopifnot(NP>=NW)
+  NP_min <- as.integer(NP/3)
+  if(NW<NP_min){
+    L2 <- 2^floor(log2(NP_min))
+    U2 <- 2^ceiling(log2(NP_min))
+    if (abs(L2 - NP_min) < abs(U2 - NP_min)) {
+      NW <- as.integer(L2)
+    } else {
+      NW <- as.integer(U2)
+    }
+  }
   if(!is.null(ts)){
     dts <- diff(ts)
     dt <- mean(dts)
@@ -69,7 +78,7 @@ build_TS <- function(
     warning("Time step is not a rational number. Rounding to 3 decimal places (max sampling frequency 1kHz)")
     dt <- round(dt,3)
   }
-    ts <- seq(0,(NP-1)*dt,by=dt)
+  ts <- seq(0,(NP-1)*dt,by=dt)
   Fs <- 1 / dt
   
   ## Scale Units  ----
@@ -90,7 +99,7 @@ build_TS <- function(
   
   ATo <- data.table(ts=ts, Units=TargetUnits,X)
   if(Output=="ATo"){return(ATo)}
-
+  
   # setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
   
   ## Scale record ----
@@ -112,17 +121,22 @@ build_TS <- function(
     Fs <- TargetFs
     dt <- 1/Fs
   }
-  # browser()
   ## Case #2. Acceleration Time Histories ----
   if(FlatZeros==TRUE){
     Wo <- X[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
   } else {
     Wo <- X[,.(sapply(.SD, function(x) {rep(1, length(x))}))]
   }
- 
+  
   AT <- X
   AT <- AT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-  AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # Detrend
+  if(DetrendAT==TRUE){
+    AT <-AT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
+  
+  
   names(AT) <- OCID
   # browser()
   VT <- AT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
@@ -132,7 +146,12 @@ build_TS <- function(
     Wo <- rbind(Wo, O)
   }
   VT <- VT[, lapply(seq_along(.SD), function(i) {.SD[[i]] * Wo[[i]]})]
-  VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  # VT <- VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  if(DetrendVT==TRUE){
+    VT <-VT[, .(sapply(.SD, function(x){x-mean(x)}))]
+  }
+  
+  
   names(VT) <- OCID
   
   DT <- VT[, lapply(.SD, function(x){ .integrate(dx=x,dt=dt,NW=NW,OVLP=OVLP) })]
@@ -167,7 +186,7 @@ build_TS <- function(
   }
   ## Taper Zeros ----
   # Wo <- AT[,.(sapply(.SD, function(x) {.taperI(x)}))]
- 
+  
   if(FlatZeros==TRUE){
     Wo <-AT[,.(sapply(.SD, function(x) {.taperA(x,Astop=SFU*AstopAT,Apass=SFU*ApassAT)}))]
   } else {
@@ -198,7 +217,7 @@ build_TS <- function(
   if(DetrendDT==TRUE){
     DT <- DT[, .(sapply(.SD, function(x){x-mean(x)}))]
   }
- 
+  
   
   
   ## Normalize Maximum ----
