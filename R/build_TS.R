@@ -58,14 +58,14 @@ build_TS <- function(
   X <- copy(x) |> as.data.table()
   
   NP <- nrow(X)
-  NP_min <- as.integer(NP/3)
-  if(NW<NP_min){
-    L2 <- 2^floor(log2(NP_min))
-    U2 <- 2^ceiling(log2(NP_min))
-    if (abs(L2 - NP_min) < abs(U2 - NP_min)) {
-      NW <- as.integer(L2)
+  NW_min <- NP/2
+  if(NW>NW_min){
+    L2 <- 2^floor(log2(NW_min))
+    U2 <- 2^ceiling(log2(NW_min))
+    if (abs(L2 - NW_min) < abs(U2 - NW_min)) {
+      NW <- min(as.integer(L2),NP)
     } else {
-      NW <- as.integer(U2)
+      NW <- min(as.integer(U2),NP)
     }
   }
   if(!is.null(ts)){
