@@ -50,6 +50,7 @@ get_imf <- function(.x=NULL, s=NULL, ts=NULL, dt=NULL, method="emd", boundary="w
   
   if (!is.null(ts)) {
     dt <- mean(diff(ts))
+    to <- min(ts)
   }
   
   ts <- seq(0, (length(s)-1)*dt, by=dt)
@@ -81,7 +82,10 @@ get_imf <- function(.x=NULL, s=NULL, ts=NULL, dt=NULL, method="emd", boundary="w
     RES <- AUX$residue
   }
   
-  
+  if(ncol(IMF) == 0) {
+    warning("No IMFs were found.")
+    return(NULL)
+  }
   # Zero padding to ensure IMF has the same length as s and t
   if (nrow(IMF) < nrow(DT)) {
     pad_length <- nrow(DT) - nrow(IMF)
@@ -94,7 +98,7 @@ get_imf <- function(.x=NULL, s=NULL, ts=NULL, dt=NULL, method="emd", boundary="w
   setnames(IMF, c(paste0("IMF", seq_len(ncol(IMF)))))
   
   # Add signal and residue as the last columns of IMF
-  TSW <- data.table(t=DT$t, signal=DT$s, IMF,residue=RES)
+  TSW <- data.table(t=DT$t+to, signal=DT$s, IMF,residue=RES)
   #
   ivars <- c("t")
   mvars <- colnames(TSW[, -c("t")])
