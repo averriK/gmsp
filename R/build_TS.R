@@ -257,7 +257,7 @@ build_TS <- function(
   #   TSL <- TSL[,.trimZeros(.SD),by=c("OCID","ID")]}
   
   ## Return ----
-  return(list(ATo=ATo,TSL=TSL,TSW=TSW,Wo=Wo,Ao=Ao,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = Units))
+  return(list(ATo=ATo,TSL=TSL,TSW=TSW,Wo=Wo,Fs = Fs, dt = dt, df=df,fs=fs,NP = NP, TargetUnits = TargetUnits, SourceUnits = Units))
   
   
 }
