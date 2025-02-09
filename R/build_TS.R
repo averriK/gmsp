@@ -98,7 +98,7 @@ build_TS <- function(
   # Export RAW record scaled to TargetUnits
   
   ATo <- data.table(ts=ts, Units=TargetUnits,X)
-  if(Output=="ATo"){return(ATo)}
+  if(!is.null(Output) && Output=="ATo"){return(ATo)}
   
   # setnames(RTSW,old=OCID,new=paste0("AT.",OCID))
   
@@ -230,9 +230,9 @@ build_TS <- function(
   names(AT) <- OCID
   names(VT) <- OCID
   names(DT) <- OCID
-  if(Output=="AT"){return(AT)}
-  if(Output=="VT"){return(VT)}
-  if(Output=="DT"){return(DT)}
+  if(!is.null(Output) && Output=="AT"){return(AT)}
+  if(!is.null(Output) &&  Output=="VT"){return(VT)}
+  if(!is.null(Output) && Output=="DT"){return(DT)}
   
   ## Summary ----
   NP <-  nrow(AT)
@@ -243,13 +243,13 @@ build_TS <- function(
   ## Pack Time Series  ----
   
   TSW <- data.table(ts=ts, AT = AT, VT = VT, DT = DT)
-  if(Output=="TSW"){return(TSW)}
+  if(!is.null(Output) && Output=="TSW"){return(TSW)}
   
   ivars <- c("ts")
   mvars <- colnames(TSW[, -c("ts")])
   AUX <- data.table::melt(TSW, id.vars = ivars, measure.vars = mvars) |> na.omit()
   TSL <- AUX[,.(t=ts,s=value,ID=gsub("\\..*$", "", variable), OCID=gsub("^[^.]*\\.", "", variable))]
-  if(Output=="TSL"){return(TSL)}
+  if(!is.null(Output) && Output=="TSL"){return(TSL)}
   
   ## Trim Records,  ----
   # if(TrimZeros){
