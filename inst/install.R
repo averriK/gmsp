@@ -8,6 +8,6 @@ remove.packages("gmsp") |> suppressWarnings()
 ## Commit Push
 # remotes::install_github("averrik/gmsp",auth_token = Sys.getenv("PAT"))
 devtools::install()
-# remotes::install_github("averriK/gmsp")
+remotes::install_github("averriK/gmsp")
 
 
