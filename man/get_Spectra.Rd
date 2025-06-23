@@ -2,26 +2,77 @@
 % Please edit documentation in R/get_Spectra.R
 \name{get_Spectra}
 \alias{get_Spectra}
-\title{Title}
+\title{Calculate Response Spectra from Acceleration Time Series}
 \usage{
 get_Spectra(.x = NULL, s = NULL, t = NULL, dt = NULL, Tn = NULL, xi = 0.05)
 }
 \arguments{
-\item{.x}{data.table}
+\item{.x}{Optional data.table containing acceleration time series data with
+columns 's' (acceleration values) and 't' (time values).}
 
-\item{s}{vector}
+\item{s}{Optional numeric vector of acceleration values. Required if \code{.x} is NULL.}
 
-\item{t}{vector}
+\item{t}{Optional numeric vector of time values. Required if \code{.x} is NULL.}
 
-\item{dt}{double}
+\item{dt}{Optional numeric value for time step. If NULL, calculated from \code{t} vector.}
 
-\item{Tn}{vector}
+\item{Tn}{Optional numeric vector of natural periods (in seconds) for SDOF oscillators.
+If NULL, uses a predefined set of periods from 0.01 to 10 seconds.}
 
-\item{xi}{double}
+\item{xi}{Numeric value for damping ratio (default: 0.05, i.e., 5\% critical damping).}
 }
 \value{
-list
+A list containing:
+\item{Tn}{Natural periods vector including 0 (for PGA) and the input periods}
+\item{xi}{Damping ratio used in calculations}
+\item{PSA}{Pseudo-spectral acceleration values corresponding to each period}
 }
 \description{
-Title
+Computes pseudo-spectral acceleration (PSA) response spectra from acceleration
+time series data using state-space formulation with matrix exponential method.
+The function calculates the maximum response of single-degree-of-freedom (SDOF)
+oscillators with different natural periods to the input acceleration.
+}
+\details{
+The function implements the state-space method for calculating response spectra:
+\enumerate{
+\item For each natural period Tn, defines a SDOF oscillator with natural
+frequency ωn = 2π/Tn
+\item Sets up the state-space matrices A and B for the oscillator dynamics
+\item Uses matrix exponential method to solve the state-space equations
+\item Calculates the maximum displacement response for each oscillator
+\item Converts displacement to pseudo-spectral acceleration using PSA = ωn² × SD
+}
+
+The method is numerically stable and efficient for calculating response spectra
+across a wide range of natural periods.
+}
+\examples{
+\dontrun{
+library(data.table)
+
+# Create sample acceleration data
+dt <- 0.01 # 100 Hz sampling
+t <- seq(0, 10, by = dt)
+acc <- sin(2 * pi * 2 * t) * 0.1 # 2 Hz sine wave
+
+# Calculate response spectra
+spectra <- get_Spectra(
+    s = acc,
+    t = t,
+    xi = 0.05
+)
+
+# Plot the response spectra
+plot(spectra$Tn, spectra$PSA,
+    type = "l", log = "xy",
+    xlab = "Period (s)", ylab = "PSA (m/s²)",
+    main = "Response Spectra"
+)
+
+# Using data.table input
+acc_data <- data.table(s = acc, t = t)
+spectra_dt <- get_Spectra(.x = acc_data, xi = 0.05)
+}
+
 }

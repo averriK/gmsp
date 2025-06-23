@@ -2,24 +2,75 @@
 % Please edit documentation in R/build_FFT.R
 \name{build_FFT}
 \alias{build_FFT}
-\title{Title}
+\title{Build Fast Fourier Transform (FFT) Spectrum}
 \usage{
 build_FFT(.x = NULL, s = NULL, t = NULL, zp = 256, kf = 1)
 }
 \arguments{
-\item{.x}{data.table}
+\item{.x}{Optional data.table containing time series data with columns 's'
+(signal values) and 't' (time values).}
 
-\item{s}{vector}
+\item{s}{Optional numeric vector of signal values. Required if \code{.x} is NULL.}
 
-\item{t}{vector}
+\item{t}{Optional numeric vector of time values. Required if \code{.x} is NULL.}
 
-\item{zp}{numeric}
+\item{zp}{Integer specifying the number of zeros to pad at the beginning and
+end of the signal (default: 256).}
 
-\item{kf}{numeric}
+\item{kf}{Numeric factor to limit the maximum frequency to kf × Nyquist
+frequency (default: 1.0).}
 }
 \value{
-data.table
+A data.table containing:
+\item{fs}{Frequency vector in Hz}
+\item{A}{Single-sided amplitude spectrum}
 }
 \description{
-Title
+Computes the amplitude spectrum of a time series signal using Fast Fourier
+Transform with optional zero-padding. The function returns both single-sided
+and double-sided amplitude spectra, with automatic frequency range limiting.
+}
+\details{
+The function performs the following steps:
+\enumerate{
+\item Removes the mean from the input signal
+\item Applies zero-padding to improve frequency resolution
+\item Computes FFT with length adjusted to the next power of 2
+\item Calculates single-sided amplitude spectrum
+\item Limits the frequency range based on the kf parameter
+}
+
+Zero-padding improves frequency resolution but does not add new information
+to the signal. The kf parameter allows limiting the output to frequencies
+below the Nyquist frequency for noise reduction.
+}
+\examples{
+\dontrun{
+library(data.table)
+
+# Create sample signal
+dt <- 0.01 # 100 Hz sampling
+t <- seq(0, 1, by = dt)
+signal <- sin(2 * pi * 10 * t) + 0.5 * sin(2 * pi * 25 * t)
+
+# Compute FFT spectrum
+spectrum <- build_FFT(
+    s = signal,
+    t = t,
+    zp = 256,
+    kf = 0.8
+)
+
+# Plot the spectrum
+plot(spectrum$fs, spectrum$A,
+    type = "l",
+    xlab = "Frequency (Hz)", ylab = "Amplitude",
+    main = "FFT Spectrum"
+)
+
+# Using data.table input
+signal_data <- data.table(s = signal, t = t)
+spectrum_dt <- build_FFT(.x = signal_data)
+}
+
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_imf.R
 \name{get_imf}
 \alias{get_imf}
-\title{Title}
+\title{Extract Intrinsic Mode Functions (IMFs) from Time Series}
 \usage{
 get_imf(
   .x = NULL,
@@ -20,33 +20,114 @@ get_imf(
 )
 }
 \arguments{
-\item{.x}{data.table}
+\item{.x}{Optional data.table containing time series data with columns 's'
+(signal values) and 't' (time values).}
 
-\item{s}{numeric vector}
+\item{s}{Optional numeric vector of signal values. Required if \code{.x} is NULL.}
 
-\item{ts}{numeric vector}
+\item{ts}{Optional numeric vector of time values. Required if \code{.x} is NULL.}
 
-\item{dt}{numeric}
+\item{dt}{Optional numeric value for time step. If NULL, calculated from \code{ts} vector.}
 
-\item{method}{string}
+\item{method}{Character string specifying the decomposition method:
+\itemize{
+\item "emd" - Empirical Mode Decomposition (default)
+\item "eemd" - Ensemble Empirical Mode Decomposition
+\item "ceemd" - Complete Ensemble Empirical Mode Decomposition
+}}
 
-\item{boundary}{string}
+\item{boundary}{Character string specifying the boundary condition:
+\itemize{
+\item "wave" - Wave boundary condition (default)
+\item "none" - No boundary condition
+\item "symmetric" - Symmetric boundary condition
+\item "periodic" - Periodic boundary condition
+\item "evenodd" - Even-odd boundary condition
+}}
 
-\item{max.imf}{integer}
+\item{max.imf}{Integer specifying the maximum number of IMFs to extract (default: 15).}
 
-\item{noise.type}{string}
+\item{noise.type}{Character string for noise type in ensemble methods:
+\itemize{
+\item "gaussian" - Gaussian noise (default)
+\item "uniform" - Uniform noise
+}}
 
-\item{noise.amp}{numeric}
+\item{noise.amp}{Numeric value for noise amplitude in ensemble methods (default: 0.5e-7).}
 
-\item{trials}{integer}
+\item{trials}{Integer specifying the number of trials for ensemble methods (default: 10).}
 
-\item{stop.rule}{string}
+\item{stop.rule}{Character string for the stopping rule:
+\itemize{
+\item "type5" - Type 5 stopping rule (default)
+\item "type1" - Type 1 stopping rule
+\item "type2" - Type 2 stopping rule
+\item "type3" - Type 3 stopping rule
+\item "type4" - Type 4 stopping rule
+}}
 
-\item{verbose}{boolean}
+\item{verbose}{Logical. If TRUE, prints progress information for ensemble methods.}
 }
 \value{
-data.table
+A data.table in long format containing:
+\item{t}{Time values}
+\item{s}{Signal values (IMFs, original signal, and residue)}
+\item{IMF}{Component identifier (IMF1, IMF2, ..., signal, residue)}
 }
 \description{
-Title
+Decomposes a time series signal into Intrinsic Mode Functions (IMFs) using
+Empirical Mode Decomposition (EMD), Ensemble EMD (EEMD), or Complete Ensemble
+EMD (CEEMD). IMFs represent oscillatory modes embedded in the signal, each
+with a characteristic frequency and amplitude.
+}
+\details{
+The function implements three different EMD variants:
+\enumerate{
+\item \strong{EMD}: Standard Empirical Mode Decomposition that iteratively
+extracts IMFs by sifting the signal
+\item \strong{EEMD}: Ensemble EMD adds white noise to the signal multiple
+times and averages the results to reduce mode mixing
+\item \strong{CEEMD}: Complete Ensemble EMD uses complementary noise pairs
+to further improve the decomposition quality
+}
+
+Each IMF represents a mode of oscillation with varying amplitude and frequency,
+making it useful for analyzing non-stationary and non-linear signals.
+}
+\examples{
+\dontrun{
+library(data.table)
+
+# Create sample signal with multiple frequencies
+dt <- 0.01 # 100 Hz sampling
+t <- seq(0, 2, by = dt)
+signal <- sin(2 * pi * 2 * t) + 0.5 * sin(2 * pi * 10 * t) + 0.1 * rnorm(length(t))
+
+# Extract IMFs using standard EMD
+imfs <- get_imf(
+    s = signal,
+    ts = t,
+    method = "emd",
+    max.imf = 5
+)
+
+# Extract IMFs using ensemble EMD
+imfs_eemd <- get_imf(
+    s = signal,
+    ts = t,
+    method = "eemd",
+    trials = 20,
+    noise.amp = 0.1
+)
+
+# Plot the first few IMFs
+library(ggplot2)
+ggplot(
+    imfs[IMF \%in\% c("IMF1", "IMF2", "signal")],
+    aes(x = t, y = s, color = IMF)
+) +
+    geom_line() +
+    facet_wrap(~IMF, ncol = 1, scales = "free_y")
+}
+
 }

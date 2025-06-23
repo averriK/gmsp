@@ -1,4 +1,3 @@
-
 #' Title
 #'
 #' @param X vector. Time Series
@@ -8,16 +7,17 @@
 #'
 #' @return list
 #' @export
-#'
-#' @examples
-remove_IMF <- function(X,EMD,removeIMF1=0,removeIMFn=0){
-  on.exit(expr={rm(list = ls())}, add = TRUE)
-  if (removeIMF1>0 ||removeIMFn>0) {
-    nimf <- EMD$nimf
-    i <- removeIMF1
-    j <- removeIMFn
-    COLS <- colnames(EMD$imf)[(i+1):(nimf-j)]
-    X <-  EMD$imf[,COLS,with = FALSE] |> rowSums()
-  }
-  return(X)
+
+remove_IMF <- function(X, EMD, removeIMF1 = 0, removeIMFn = 0) {
+    on.exit(expr = {
+        rm(list = ls())
+    }, add = TRUE)
+    if (removeIMF1 > 0 || removeIMFn > 0) {
+        nimf <- EMD$nimf
+        i <- removeIMF1
+        j <- removeIMFn
+        COLS <- colnames(EMD$imf)[(i + 1):(nimf - j)]
+        X <- EMD$imf[, COLS, with = FALSE] |> rowSums()
+    }
+    return(X)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/build_TS.R
 \name{build_TS}
 \alias{build_TS}
-\title{buildTS}
+\title{Build Time Series from Seismic Data}
 \usage{
 build_TS(
   x,
@@ -27,47 +27,97 @@ build_TS(
 )
 }
 \arguments{
-\item{x}{data.table}
+\item{x}{A data.table containing seismic acceleration time series data.
+Each column represents a different component or station.}
 
-\item{ts}{numeric}
+\item{ts}{Optional numeric vector of time values. If provided, \code{dt} will be
+calculated as the mean time step.}
 
-\item{dt}{numeric}
+\item{dt}{Optional numeric value for the time step (sampling interval) in seconds.}
 
-\item{Units}{character}
+\item{Units}{Character string specifying the units of the input data.
+Must be one of: "mm", "cm", "m", "gal", "g". If the string contains
+separators like "///" or "+", only the first part is used.}
 
-\item{DetrendAT}{boolean}
+\item{DetrendAT}{Logical. If TRUE, removes the mean from acceleration time series.}
 
-\item{DetrendVT}{boolean}
+\item{DetrendVT}{Logical. If TRUE, removes the mean from velocity time series.}
 
-\item{DetrendDT}{boolean}
+\item{DetrendDT}{Logical. If TRUE, removes the mean from displacement time series.}
 
-\item{Fmax}{integer}
+\item{Fmax}{Integer specifying the maximum frequency for filtering (default: 16 Hz).}
 
-\item{kNyq}{numeric}
+\item{kNyq}{Numeric value for Nyquist frequency factor (default: 3.125, must be > 2.5).}
 
-\item{Resample}{boolean}
+\item{Resample}{Logical. If TRUE, resamples the data to a target frequency
+calculated as max(2.5, kNyq) * Fmax (default: TRUE).}
 
-\item{TargetUnits}{character Units}
+\item{TargetUnits}{Character string for the target units after conversion
+(default: "mm").}
 
-\item{NW}{integer Windows Length}
+\item{NW}{Integer specifying the window length for FFT operations (default: 128).
+Will be adjusted to the nearest power of 2 if it exceeds half the data length.}
 
-\item{OVLP}{integer}
+\item{OVLP}{Integer specifying the overlap percentage for FFT windows (default: 75).}
 
-\item{FlatZeros}{boolean}
+\item{FlatZeros}{Logical. If TRUE, applies amplitude-based tapering to flatten
+near-zero regions (default: FALSE).}
 
-\item{AstopAT}{numeric}
+\item{AstopAT}{Numeric value for the stop amplitude threshold in acceleration
+tapering (default: 1e-4).}
 
-\item{ApassAT}{numeric}
+\item{ApassAT}{Numeric value for the pass amplitude threshold in acceleration
+tapering (default: 1e-3).}
 
-\item{TrimZeros}{boolean}
+\item{TrimZeros}{Logical. If TRUE, removes time points where all components
+have zero amplitude (default: FALSE).}
 
-\item{Normalize}{boolean}
+\item{Normalize}{Logical. If TRUE, normalizes the data by dividing by the
+maximum absolute value of each component (default: FALSE).}
 
-\item{Output}{character}
+\item{Output}{Character string specifying the output format. If NULL (default),
+returns a complete list. Options: "ATo", "AT", "VT", "DT", "TSW", "TSL".}
 }
 \value{
-list
+A list containing the processed time series data and metadata:
+\item{ATo}{Original acceleration time series scaled to target units}
+\item{TSL}{Long format time series data with columns: t (time), s (value),
+ID (component type), OCID (original column name)}
+\item{TSW}{Wide format time series data with columns: ts (time), AT, VT, DT}
+\item{Wo}{Tapering window applied to the data}
+\item{Fs}{Final sampling frequency in Hz}
+\item{dt}{Final time step in seconds}
+\item{df}{Frequency resolution in Hz}
+\item{fs}{Frequency vector for spectral analysis}
+\item{NP}{Number of data points}
+\item{TargetUnits}{Target units used for conversion}
+\item{SourceUnits}{Original units of input data}
+
+If \code{Output} is specified, returns only the requested component:
+\item{ATo}{Original acceleration time series}
+\item{AT}{Processed acceleration time series}
+\item{VT}{Velocity time series}
+\item{DT}{Displacement time series}
+\item{TSW}{Wide format time series}
+\item{TSL}{Long format time series}
 }
 \description{
-buildTS
+Processes seismic acceleration time series data to generate acceleration (AT),
+velocity (VT), and displacement (DT) time series. The function performs unit
+conversion, resampling, filtering, integration/differentiation, and optional
+detrending and normalization.
+}
+\details{
+The function performs the following processing steps:
+\enumerate{
+\item Unit conversion to target units if necessary
+\item Optional normalization by maximum absolute value
+\item Optional detrending by removing mean
+\item Resampling to target frequency if enabled
+\item Integration of acceleration to velocity using frequency-domain filtering
+\item Integration of velocity to displacement
+\item Differentiation back to velocity and acceleration for consistency
+\item Optional amplitude-based tapering for near-zero regions
+\item Optional trimming of zero-amplitude regions
+}'
 }
