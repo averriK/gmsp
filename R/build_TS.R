@@ -104,6 +104,7 @@ build_TS <- function(
     TrimZeros = FALSE,
     Normalize = FALSE,
     Output = NULL) {
+    . <- NULL
     X <- copy(x) |> as.data.table()
 
     NP <- nrow(X)
