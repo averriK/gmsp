@@ -8,7 +8,7 @@ record_path <- file.path(record_folder, record_file)
 # Read header, dt, NPTS
 header_line <- readLines(record_path, n = 2)[2]
 # read file, ignore header
-AT <- fread(record_path, skip = 2)
+VT <- fread(record_path, skip = 2)
 # extract "dt" from "dt=0.005, npts=25418" in header_line
 dt <- sub(".*dt=([0-9.]+).*", "\\1", header_line) |> as.numeric()
 # build time vector
@@ -17,11 +17,22 @@ ts <- seq(0, (npts - 1) * dt, by = dt)
 # build TimeHistory with build_TS()
 
 
-TS <- gmsp::build_TS(
-    x = AT,
+build_TS_VT(
+    x = VT,
     dt = dt,
     ts = ts,
     Fmax = 25,
     Resample = TRUE,
-    TargetUnits = "cm/s",
+    Units = "m",
+    TargetUnits = "mm",
+)
+
+build_TS(
+    x = VT,
+    dt = dt,
+    ts = ts,
+    Fmax = 25,
+    Resample = TRUE,
+    Units = "m",
+    TargetUnits = "mm",
 )

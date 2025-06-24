@@ -1,92 +1,35 @@
 # nolint start
-#' Build Time Series from Seismic Data
-#'
-#' @description
-#' Processes seismic acceleration time series data to generate acceleration (AT),
-#' velocity (VT), and displacement (DT) time series. The function performs unit
-#' conversion, resampling, filtering, integration/differentiation, and optional
-#' detrending and normalization.
-#'
-#' @param x A data.table containing seismic acceleration time series data.
-#'   Each column represents a different component or station.
-#' @param ts Optional numeric vector of time values. If provided, `dt` will be
-#'   calculated as the mean time step.
-#' @param dt Optional numeric value for the time step (sampling interval) in seconds.
-#' @param Units Character string specifying the units of the input data.
-#'   Must be one of: "mm", "cm", "m", "gal", "g". If the string contains
-#'   separators like "///" or "+", only the first part is used.
-#' @param DetrendAT Logical. If TRUE, removes the mean from acceleration time series.
-#' @param DetrendVT Logical. If TRUE, removes the mean from velocity time series.
-#' @param DetrendDT Logical. If TRUE, removes the mean from displacement time series.
-#' @param Fmax Integer specifying the maximum frequency for filtering (default: 16 Hz).
-#' @param kNyq Numeric value for Nyquist frequency factor (default: 3.125, must be > 2.5).
-#' @param Resample Logical. If TRUE, resamples the data to a target frequency
-#'   calculated as max(2.5, kNyq) * Fmax (default: TRUE).
-#' @param TargetUnits Character string for the target units after conversion
-#'   (default: "mm").
-#' @param NW Integer specifying the window length for FFT operations (default: 128).
-#'   Will be adjusted to the nearest power of 2 if it exceeds half the data length.
-#' @param OVLP Integer specifying the overlap percentage for FFT windows (default: 75).
-#' @param FlatZeros Logical. If TRUE, applies amplitude-based tapering to flatten
-#'   near-zero regions (default: FALSE).
-#' @param AstopAT Numeric value for the stop amplitude threshold in acceleration
-#'   tapering (default: 1e-4).
-#' @param ApassAT Numeric value for the pass amplitude threshold in acceleration
-#'   tapering (default: 1e-3).
-#' @param TrimZeros Logical. If TRUE, removes time points where all components
-#'   have zero amplitude (default: FALSE).
-#' @param Normalize Logical. If TRUE, normalizes the data by dividing by the
-#'   maximum absolute value of each component (default: FALSE).
-#' @param Output Character string specifying the output format. If NULL (default),
-#'   returns a complete list. Options: "ATo", "AT", "VT", "DT", "TSW", "TSL".
-#'
-#' @return A list containing the processed time series data and metadata:
-#'   \item{ATo}{Original acceleration time series scaled to target units}
-#'   \item{TSL}{Long format time series data with columns: t (time), s (value),
-#'              ID (component type), OCID (original column name)}
-#'   \item{TSW}{Wide format time series data with columns: ts (time), AT, VT, DT}
-#'   \item{Wo}{Tapering window applied to the data}
-#'   \item{Fs}{Final sampling frequency in Hz}
-#'   \item{dt}{Final time step in seconds}
-#'   \item{df}{Frequency resolution in Hz}
-#'   \item{fs}{Frequency vector for spectral analysis}
-#'   \item{NP}{Number of data points}
-#'   \item{TargetUnits}{Target units used for conversion}
-#'   \item{SourceUnits}{Original units of input data}
-#'
-#'   If `Output` is specified, returns only the requested component:
-#'   \item{ATo}{Original acceleration time series}
-#'   \item{AT}{Processed acceleration time series}
-#'   \item{VT}{Velocity time series}
-#'   \item{DT}{Displacement time series}
-#'   \item{TSW}{Wide format time series}
-#'   \item{TSL}{Long format time series}
-#'
-#' @details
-#' The function performs the following processing steps:
-#' \enumerate{
-#'   \item Unit conversion to target units if necessary
-#'   \item Optional normalization by maximum absolute value
-#'   \item Optional detrending by removing mean
-#'   \item Resampling to target frequency if enabled
-#'   \item Integration of acceleration to velocity using frequency-domain filtering
-#'   \item Integration of velocity to displacement
-#'   \item Differentiation back to velocity and acceleration for consistency
-#'   \item Optional amplitude-based tapering for near-zero regions
-#'   \item Optional trimming of zero-amplitude regions
-#' }'
-#' @export
-#'
-#' @import data.table
-#' @importFrom stats na.omit
-#' @importFrom stats sd
-#' @importFrom seewave stdft
-#' @importFrom seewave istft
+#' @param x          data.table.  Columns = channels, rows = samples.
+#' @param ts         Numeric vector of time values.  Optional if dt is given.
+#' @param dt         Numeric scalar sampling interval (seconds).  Optional if ts is given.
+#' @param Units      Character.  Allowed for build_TS: "mm","cm","m","gal","g".
+#'                   Allowed for build_TS_VT: "mm","cm","m".
+#' @param TargetUnits Distance units after conversion ("mm","cm","m").
+#' @param Fmax       Integer.  Physical maximum frequency of interest (Hz).
+#' @param kNyq       Numeric (> 2.5).  Multiplier used when computing the target
+#'                   resampling rate.
+#' @param Resample   Logical.  If TRUE, resamples the acceleration record to
+#'                   max(2.5, kNyq) * Fmax Hz.  Ignored for the raw VT input.
+#' @param DetrendAT  Logical.  Subtract mean from acceleration series after each
+#'                   derivation step.
+#' @param DetrendVT  Logical.  Subtract mean from velocity series after each
+#'                   integration or differentiation step.
+#' @param DetrendDT  Logical.  Subtract mean from displacement series.
+#' @param NW         Integer.  Window length for the STFT (power of two).
+#' @param OVLP       Integer (0-100).  Window overlap percentage for the STFT.
+#' @param FlatZeros  Logical.  If TRUE, multiplies the acceleration series by a
+#'                   smooth amplitude taper.
+#' @param AstopAT    Numeric.  Stop amplitude threshold for the taper (acceleration).
+#' @param ApassAT    Numeric.  Pass amplitude threshold for the taper (acceleration).
+#' @param TrimZeros  Logical.  If TRUE, removes rows where the taper is zero for
+#'                   every channel.
+#' @param Normalize  Logical.  If TRUE, divides by peak absolute amplitude before
+#'                   processing and restores it afterwards.
+#' @param Output     Character or NULL.  If not NULL, returns only the requested
+#'                   component: "ATo","AT","VT","DT","TSW","TSL" (plus "VTo" for
+#'                   build_TS_VT).  NULL returns the full list.
 #' @importFrom seewave ffilter
-#' @importFrom signal resample
-#' @importFrom stringr str_split
-#' @importFrom purrr map
-#'
+
 build_TS <- function(
     x, ts = NULL, dt = NULL, Units,
     DetrendAT = FALSE,
