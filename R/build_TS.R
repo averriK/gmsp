@@ -29,6 +29,8 @@
 #'                   component: "ATo","AT","VT","DT","TSW","TSL" (plus "VTo" for
 #'                   build_TS_VT).  NULL returns the full list.
 #' @importFrom seewave ffilter
+#' @noRd
+#' @export
 
 build_TS <- function(
     x, ts = NULL, dt = NULL, Units,

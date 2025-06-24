@@ -20,7 +20,6 @@
 #' @importFrom stats dnorm
 #' @importFrom stats spline
 #'
-#' @examples
 #' 
 smooth_Spectra <- function(Tn,A,method="none",window=5,po=3,cv=FALSE,sigma=2){
   stopifnot(tolower(method) %in% c("none","ma","sg","sg","gk","ema","sm"))
